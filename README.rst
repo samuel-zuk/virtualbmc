@@ -2,26 +2,43 @@
 VirtualBMC
 ==========
 
-Team and repository tags
-------------------------
-
-.. image:: https://governance.openstack.org/tc/badges/virtualbmc.svg
-    :target: https://governance.openstack.org/tc/reference/tags/index.html
-
 Overview
 --------
 
-A virtual BMC for controlling virtual machines using IPMI commands.
+This repository is a development fork of https://opendev.org/openstack/virtualbmc,
+intended to create a virtual BMC for Ironic nodes (instead of virtual machines).
 
-This software is intended for CI and development use only. Please do not run
-VirtualBMC in a production environment for any reason.
 
 Installation
 ~~~~~~~~~~~~
 
 .. code-block:: bash
 
-  pip install virtualbmc
+  git clone https://github.com/CCI-MOC/virtualbmc
+  cd virtualbmc
+  python setup.py install
+
+
+Usage
+~~~~~
+
+Start the virtual BMC daemon. Note that this user must be able to run OpenStack commands
+(for example, by sourcing an OpenStack RC file), and it must have permission to bind
+ports.
+
+.. code-block:: bash
+
+  vbmcd
+
+Once the daemon is running, you can create and start virtual BMC instances for a node
+as follows:
+
+.. code-block:: bash
+
+  vbmc add <node name>
+  vbmc start <node name>
+
+Run `vbmc --help` to view additional options.
 
 
 Supported IPMI commands
@@ -40,19 +57,3 @@ Supported IPMI commands
 
   # Get the current boot device
   ipmitool -I lanplus -U admin -P password -H 127.0.0.1 chassis bootparam get 5
-
-Project resources
-~~~~~~~~~~~~~~~~~
-
-* Documentation: https://docs.openstack.org/virtualbmc/latest
-* Source: https://opendev.org/openstack/virtualbmc
-* Bugs: https://storyboard.openstack.org/#!/project/openstack/virtualbmc
-* Release Notes: https://docs.openstack.org/releasenotes/virtualbmc/
-
-Project status, bugs, and requests for feature enhancements (RFEs) are tracked
-in StoryBoard:
-https://storyboard.openstack.org/#!/project/openstack/virtualbmc
-
-For information on how to contribute to VirtualBMC, see
-https://docs.openstack.org/virtualbmc/latest/contributor
-
