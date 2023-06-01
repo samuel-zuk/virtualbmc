@@ -37,8 +37,8 @@ CONF = vbmc_config.get_config()
 
 class VirtualBMCManager(object):
 
-    VBMC_OPTIONS = ['username', 'password', 'address', 'port',
-                    'domain_name', 'libvirt_uri', 'libvirt_sasl_username',
+    VBMC_OPTIONS = ['ident', 'password', 'address', 'port', 'name',
+                    'libvirt_uri', 'libvirt_sasl_username',
                     'libvirt_sasl_password', 'active']
 
     def __init__(self):

@@ -21,7 +21,8 @@ from virtualbmc import exception
 from virtualbmc.tests.unit import base
 from virtualbmc.tests.unit import utils as test_utils
 from virtualbmc import utils
-from virtualbmc import vbmc
+from virtualbmc.vbmc import constants
+from virtualbmc.vbmc import libvirt as vbmc
 
 DOMAIN_XML_TEMPLATE = """\
 <domain type='qemu'>
@@ -54,13 +55,13 @@ class VirtualBMCTestCase(base.TestCase):
         # constructor so we need to mock it here
         mock.patch('pyghmi.ipmi.bmc.Bmc.__init__',
                    lambda *args, **kwargs: None).start()
-        self.vbmc = vbmc.VirtualBMC(**self.domain)
+        self.vbmc = vbmc.LibvirtVbmc(**self.domain)
 
     def _assert_libvirt_calls(self, mock_libvirt_domain, mock_libvirt_open,
                               readonly=False):
         """Helper method to assert that the LibVirt calls were invoked."""
         mock_libvirt_domain.assert_called_once_with(
-            mock.ANY, self.domain['domain_name'])
+            mock.ANY, self.domain['name'])
         params = {'sasl_password': self.domain['libvirt_sasl_password'],
                   'sasl_username': self.domain['libvirt_sasl_username'],
                   'uri': self.domain['libvirt_uri']}
@@ -69,12 +70,12 @@ class VirtualBMCTestCase(base.TestCase):
         mock_libvirt_open.assert_called_once_with(**params)
 
     def test_get_boot_device(self, mock_libvirt_domain, mock_libvirt_open):
-        for boot_device in vbmc.GET_BOOT_DEVICES_MAP:
+        for boot_device in constants.GET_BOOT_DEVICES_MAP:
             domain_xml = DOMAIN_XML_TEMPLATE % boot_device
             mock_libvirt_domain.return_value.XMLDesc.return_value = domain_xml
             ret = self.vbmc.get_boot_device()
 
-            self.assertEqual(vbmc.GET_BOOT_DEVICES_MAP[boot_device], ret)
+            self.assertEqual(constants.GET_BOOT_DEVICES_MAP[boot_device], ret)
             self._assert_libvirt_calls(mock_libvirt_domain, mock_libvirt_open,
                                        readonly=True)
 
@@ -83,14 +84,14 @@ class VirtualBMCTestCase(base.TestCase):
             mock_libvirt_open.reset_mock()
 
     def test_set_boot_device(self, mock_libvirt_domain, mock_libvirt_open):
-        for boot_device in vbmc.SET_BOOT_DEVICES_MAP:
+        for boot_device in constants.SET_BOOT_DEVICES_MAP:
             domain_xml = DOMAIN_XML_TEMPLATE % 'foo'
             mock_libvirt_domain.return_value.XMLDesc.return_value = domain_xml
             conn = mock_libvirt_open.return_value.__enter__.return_value
             self.vbmc.set_boot_device(boot_device)
 
             expected = ('<boot dev="%s" />' %
-                        vbmc.SET_BOOT_DEVICES_MAP[boot_device])
+                        constants.SET_BOOT_DEVICES_MAP[boot_device])
             self.assertIn(expected, str(conn.defineXML.call_args))
             self.assertEqual(1, str(conn.defineXML.call_args).count('<boot '))
             self._assert_libvirt_calls(mock_libvirt_domain, mock_libvirt_open)
@@ -118,7 +119,7 @@ class VirtualBMCTestCase(base.TestCase):
         mock_libvirt_domain.return_value.isActive.return_value = power_on
         ret = self.vbmc.get_power_state()
 
-        expected = vbmc.POWERON if power_on else vbmc.POWEROFF
+        expected = constants.POWERON if power_on else constants.POWEROFF
         self.assertEqual(expected, ret)
         self._assert_libvirt_calls(mock_libvirt_domain, mock_libvirt_open,
                                    readonly=True)

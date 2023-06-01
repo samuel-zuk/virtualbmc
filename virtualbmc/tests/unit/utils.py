@@ -15,10 +15,10 @@
 
 
 def get_domain(**kwargs):
-    domain = {'domain_name': kwargs.get('domain_name', 'SpongeBob'),
+    domain = {'name': kwargs.get('name', 'SpongeBob'),
               'address': kwargs.get('address', '::'),
               'port': kwargs.get('port', 123),
-              'username': kwargs.get('username', 'admin'),
+              'ident': kwargs.get('ident', 'admin'),
               'password': kwargs.get('password', 'pass'),
               'libvirt_uri': kwargs.get('libvirt_uri', 'foo://bar'),
               'libvirt_sasl_username': kwargs.get('libvirt_sasl_username'),
