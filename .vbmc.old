@@ -21,44 +21,18 @@ from virtualbmc import utils
 
 LOG = log.get_logger()
 
-# Power states
-POWEROFF = 0
-POWERON = 1
-
-# From the IPMI - Intelligent Platform Management Interface Specification
-# Second Generation v2.0 Document Revision 1.1 October 1, 2013
-# https://www.intel.com/content/dam/www/public/us/en/documents/product-briefs/ipmi-second-gen-interface-spec-v2-rev1-1.pdf
-#
-# Command failed and can be retried
-IPMI_COMMAND_NODE_BUSY = 0xC0
-# Invalid data field in request
-IPMI_INVALID_DATA = 0xcc
-
-# Boot device maps
-GET_BOOT_DEVICES_MAP = {
-    'network': 4,
-    'hd': 8,
-    'cdrom': 0x14,
-}
-
-SET_BOOT_DEVICES_MAP = {
-    'network': 'network',
-    'hd': 'hd',
-    'optical': 'cdrom',
-}
-
 
 class VirtualBMC(bmc.Bmc):
 
-    def __init__(self, username, password, port, address,
-                 domain_name, libvirt_uri, libvirt_sasl_username=None,
-                 libvirt_sasl_password=None, **kwargs):
-        super(VirtualBMC, self).__init__({username: password},
-                                         port=port, address=address)
-        self.domain_name = domain_name
-        self._conn_args = {'uri': libvirt_uri,
-                           'sasl_username': libvirt_sasl_username,
-                           'sasl_password': libvirt_sasl_password}
+    # def __init__(self, username, password, port, address,
+    #              domain_name, libvirt_uri, libvirt_sasl_username=None,
+    #              libvirt_sasl_password=None, **kwargs):
+    #     super(VirtualBMC, self).__init__({username: password},
+    #                                      port=port, address=address)
+    #     self.domain_name = domain_name
+    #     self._conn_args = {'uri': libvirt_uri,
+    #                        'sasl_username': libvirt_sasl_username,
+    #                        'sasl_password': libvirt_sasl_password}
 
     # Copied from nova/virt/libvirt/guest.py
     def get_xml_desc(self, domain, dump_sensitive=False):
@@ -72,8 +46,6 @@ class VirtualBMC(bmc.Bmc):
         return domain.XMLDesc(flags=flags)
 
     def get_boot_device(self):
-        LOG.debug('Get boot device called for %(domain)s',
-                  {'domain': self.domain_name})
         with utils.libvirt_open(readonly=True, **self._conn_args) as conn:
             domain = utils.get_libvirt_domain(conn, self.domain_name)
             boot_element = ET.fromstring(domain.XMLDesc()).find('.//os/boot')

@@ -31,6 +31,8 @@ class VirtualBMCConfig(object):
 
     DEFAULTS = {
         'default': {
+            'enable_libvirt': 'true',
+            'enable_ironic': 'true',
             'show_passwords': 'false',
             'config_dir': os.path.join(
                 os.path.expanduser('~'), '.vbmc'
@@ -39,7 +41,7 @@ class VirtualBMCConfig(object):
                 os.path.expanduser('~'), '.vbmc', 'master.pid'
             ),
             'server_port': 50891,
-            'server_response_timeout': 5000,  # milliseconds
+            'server_response_timeout': 60000,  # milliseconds
             'server_spawn_wait': 3000,  # milliseconds
         },
         'log': {
@@ -71,6 +73,12 @@ class VirtualBMCConfig(object):
     def _validate(self):
         self._conf_dict['log']['debug'] = utils.str2bool(
             self._conf_dict['log']['debug'])
+
+        self._conf_dict['default']['enable_libvirt'] = utils.str2bool(
+            self._conf_dict['default']['enable_libvirt'])
+
+        self._conf_dict['default']['enable_ironic'] = utils.str2bool(
+            self._conf_dict['default']['enable_ironic'])
 
         self._conf_dict['default']['show_passwords'] = utils.str2bool(
             self._conf_dict['default']['show_passwords'])

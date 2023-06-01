@@ -61,7 +61,7 @@ def get_libvirt_domain(conn, domain):
     try:
         return conn.lookupByName(domain)
     except libvirt.libvirtError:
-        raise exception.DomainNotFound(domain=domain)
+        raise exception.DomainNotFound(ident=domain)
 
 
 def check_libvirt_connection_and_domain(uri, domain, sasl_username=None,

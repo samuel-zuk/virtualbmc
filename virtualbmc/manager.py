@@ -21,7 +21,7 @@ from virtualbmc import config as vbmc_config
 from virtualbmc import exception
 from virtualbmc import log
 from virtualbmc import utils
-from virtualbmc.vbmc import VirtualBMC
+from virtualbmc.vbmc import libvirt
 
 LOG = log.get_logger()
 
@@ -49,7 +49,7 @@ class VirtualBMCManager(object):
     def _parse_config(self, domain_name):
         config_path = os.path.join(self.config_dir, domain_name, 'config')
         if not os.path.exists(config_path):
-            raise exception.DomainNotFound(domain=domain_name)
+            raise exception.NotFound(ident=domain_name)
 
         try:
             config = configparser.ConfigParser()
@@ -70,7 +70,7 @@ class VirtualBMCManager(object):
             return bmc
 
         except OSError:
-            raise exception.DomainNotFound(domain=domain_name)
+            raise exception.DomainNotFound(ident=domain_name)
 
     def _store_config(self, **options):
         config = configparser.ConfigParser()
@@ -126,7 +126,7 @@ class VirtualBMCManager(object):
                 show_options = utils.mask_dict_password(bmc_config)
 
             try:
-                vbmc = VirtualBMC(**bmc_config)
+                vbmc = libvirt.LibvirtVbmc(**bmc_config)
 
             except Exception as ex:
                 LOG.exception(
@@ -273,7 +273,7 @@ class VirtualBMCManager(object):
     def delete(self, domain_name):
         domain_path = os.path.join(self.config_dir, domain_name)
         if not os.path.exists(domain_path):
-            raise exception.DomainNotFound(domain=domain_name)
+            raise exception.DomainNotFound(ident=domain_name)
 
         try:
             self.stop(domain_name)
