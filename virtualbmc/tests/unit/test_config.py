@@ -30,12 +30,14 @@ class VirtualBMCConfigTestCase(base.TestCase):
     def setUp(self):
         super(VirtualBMCConfigTestCase, self).setUp()
         self.vbmc_config = config.VirtualBMCConfig()
-        self.config_dict = {'default': {'show_passwords': 'true',
+        self.config_dict = {'default': {'enable_libvirt': 'true',
+                                        'enable_ironic': 'true',
+                                        'show_passwords': 'false',
                                         'config_dir': '/foo/bar/1',
                                         'pid_file': '/foo/bar/2',
                                         'server_port': '12345',
                                         'server_spawn_wait': 3000,
-                                        'server_response_timeout': 5000},
+                                        'server_response_timeout': 60000},
                             'log': {'debug': 'true', 'logfile': '/foo/bar/4'},
                             'ipmi': {'session_timeout': '30'}}
 

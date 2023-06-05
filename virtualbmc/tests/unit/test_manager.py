@@ -44,7 +44,7 @@ class VirtualBMCManagerTestCase(base.TestCase):
         self.domain_name1 = self.domain1['name']
         self.domain_path0 = os.path.join(_CONFIG_PATH, self.domain_name0)
         self.domain_path1 = os.path.join(_CONFIG_PATH, self.domain_name1)
-        self.add_params = {'username': 'admin', 'password': 'pass',
+        self.add_params = {'ident': 'admin', 'password': 'pass',
                            'port': '777', 'address': '::',
                            'name': 'Squidward Tentacles',
                            'libvirt_uri': 'foo://bar',
@@ -69,8 +69,8 @@ class VirtualBMCManagerTestCase(base.TestCase):
         mock_configparser.assert_called_once_with()
 
         expected_get_calls = [mock.call('VirtualBMC', i)
-                              for i in ('username', 'password', 'address',
-                                        'port', 'domain_name', 'libvirt_uri',
+                              for i in ('ident', 'password', 'address',
+                                        'port', 'name', 'libvirt_uri',
                                         'libvirt_sasl_username',
                                         'libvirt_sasl_password',
                                         'active')]
@@ -133,7 +133,7 @@ class VirtualBMCManagerTestCase(base.TestCase):
             sasl_username=self.add_params['libvirt_sasl_username'],
             sasl_password=self.add_params['libvirt_sasl_password'])
         mock_makedirs.assert_called_once_with(
-            os.path.join(_CONFIG_PATH, self.add_params['domain_name']))
+            os.path.join(_CONFIG_PATH, self.add_params['name']))
         mock_configparser.assert_called_once_with()
 
     @mock.patch.object(builtins, 'open')
@@ -154,11 +154,11 @@ class VirtualBMCManagerTestCase(base.TestCase):
         config.add_section.assert_called_once_with('VirtualBMC')
         config.write.assert_called_once_with(mock.ANY)
         mock_check_conn.assert_called_once_with(
-            self.add_params['libvirt_uri'], self.add_params['domain_name'],
+            self.add_params['libvirt_uri'], self.add_params['name'],
             sasl_username=self.add_params['libvirt_sasl_username'],
             sasl_password=self.add_params['libvirt_sasl_password'])
         mock_makedirs.assert_called_once_with(
-            os.path.join(_CONFIG_PATH, self.add_params['domain_name']))
+            os.path.join(_CONFIG_PATH, self.add_params['name']))
         mock_configparser.assert_called_once_with()
 
     @mock.patch.object(os, 'makedirs')
@@ -175,7 +175,7 @@ class VirtualBMCManagerTestCase(base.TestCase):
         self.assertEqual(ret, expected_ret)
 
         mock_check_conn.assert_called_once_with(
-            self.add_params['libvirt_uri'], self.add_params['domain_name'],
+            self.add_params['libvirt_uri'], self.add_params['name'],
             sasl_username=self.add_params['libvirt_sasl_username'],
             sasl_password=self.add_params['libvirt_sasl_password'])
 
@@ -189,7 +189,7 @@ class VirtualBMCManagerTestCase(base.TestCase):
         self.assertEqual(ret, expected_ret)
 
         mock_check_conn.assert_called_once_with(
-            self.add_params['libvirt_uri'], self.add_params['domain_name'],
+            self.add_params['libvirt_uri'], self.add_params['name'],
             sasl_username=self.add_params['libvirt_sasl_username'],
             sasl_password=self.add_params['libvirt_sasl_password'])
 

@@ -32,7 +32,8 @@ class VbmcBase(bmc.Bmc):
         self.name = 'no-name' if name is None else name
 
     @staticmethod
-    def bmc_cmd(fail_ok=True):
+    def bmc_cmd(*args, fail_ok=True):
+        """ decorator that handles errors + debugging info for bmc commands """
         def decorator(func):
             @wraps(func)
             def wrapper(self, *args, **kwargs):
@@ -67,4 +68,5 @@ class VbmcBase(bmc.Bmc):
                     else:
                         raise exception.VirtualBMCError(message=error_str)
             return wrapper
-        return partial(decorator, fail_ok=fail_ok)
+        # (szuk) this makes it so the decorator syntax "works" with arguments.
+        return decorator if len(args) == 0 else decorator(args[0])

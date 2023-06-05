@@ -32,15 +32,15 @@ class LibvirtError:
 
 
 class NotFound(VirtualBMCError):
-    message = 'Virtual machine with identifier %(ident) not found'
+    message = 'Virtual machine with name %(name) not found'
 
 
 class DomainAlreadyExists(VirtualBMCError, LibvirtError):
-    message = 'Domain %(ident)s already exists'
+    message = 'Domain %(name)s already exists'
 
 
 class DomainNotFound(VirtualBMCError, LibvirtError):
-    message = 'No libvirt domain with matching name %(ident)s was found'
+    message = 'No libvirt domain with matching name %(name)s was found'
 
 
 class LibvirtConnectionOpenError(VirtualBMCError, LibvirtError):
@@ -54,4 +54,4 @@ class DetachProcessError(VirtualBMCError):
 
 
 class NodeNotFound(VirtualBMCError, IronicError):
-    message = 'No Ironic node with matching name %(ident)s was found'
+    message = 'No Ironic node with matching name %(name)s was found'

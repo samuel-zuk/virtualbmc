@@ -7,7 +7,8 @@
 #    Unless required by applicable law or agreed to in writing, software
 #    distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
 #    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
-#    License for the specific language governing permissions and limitations under the License.
+#    License for the specific language governing permissions and limitations
+#    under the License.
 
 import xml.etree.ElementTree as ET
 
@@ -60,7 +61,12 @@ class LibvirtVbmc(base.VbmcBase):
         return constants.GET_BOOT_DEVICES_MAP.get(boot_dev, 0)
 
     @base.VbmcBase.bmc_cmd
-    def set_boot_device(self):
+    def set_boot_device(self, bootdevice):
+        device = constants.SET_BOOT_DEVICES_MAP.get(bootdevice)
+        if device is None:
+            # Invalid data field in request
+            return constants.IPMI_INVALID_DATA
+
         with utils.libvirt_open(**self._conn_args) as conn:
             domain = utils.get_libvirt_domain(conn, self.name)
             tree = ET.fromstring(
