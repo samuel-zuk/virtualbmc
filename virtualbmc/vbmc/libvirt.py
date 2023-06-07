@@ -14,7 +14,6 @@ import xml.etree.ElementTree as ET
 
 import libvirt
 
-from virtualbmc import exception
 from virtualbmc import log
 from virtualbmc import utils
 from virtualbmc.vbmc import base

@@ -10,8 +10,10 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import configparser
 import os
+
+from oslo_config import cfg
+from oslo_config import types as cfg_types
 
 from virtualbmc import utils
 
@@ -24,85 +26,100 @@ _CONFIG_FILE_PATHS = (
 
 CONFIG_FILE = next((x for x in _CONFIG_FILE_PATHS if os.path.exists(x)), '')
 
-CONFIG = None
+CONF = cfg.CONF
 
 
-class VirtualBMCConfig(object):
+class Path(cfg_types.ConfigType):
+    PATH = 'path'
+    FILE = 'file'
+    DIRECTORY = 'directory'
+    PATH_TYPES = [PATH, FILE, DIRECTORY]
 
-    DEFAULTS = {
-        'default': {
-            'enable_libvirt': 'true',
-            'enable_ironic': 'true',
-            'show_passwords': 'false',
-            'config_dir': os.path.join(
-                os.path.expanduser('~'), '.vbmc'
-            ),
-            'pid_file': os.path.join(
-                os.path.expanduser('~'), '.vbmc', 'master.pid'
-            ),
-            'server_port': 50891,
-            'server_response_timeout': 60000,  # milliseconds
-            'server_spawn_wait': 3000,  # milliseconds
-        },
-        'log': {
-            'logfile': None,
-            'debug': 'false'
-        },
-        'ipmi': {
-            # Maximum time (in seconds) to wait for the data to come across
-            'session_timeout': 1
-        },
-    }
+    def __init__(self, type_name=PATH, must_exist=True):
+        super().__init__(type_name=type_name)
+        self.path_type = type_name
+        self.must_exist = must_exist
 
-    def initialize(self):
-        config = configparser.ConfigParser()
-        config.read(CONFIG_FILE)
-        self._conf_dict = self._as_dict(config)
-        self._validate()
+        if self.path_type not in self.PATH_TYPES:
+            raise ValueError('Path type must be one of %s, received %s' %
+                             str(self.PATH_TYPES), self.path_type)
 
-    def _as_dict(self, config):
-        conf_dict = self.DEFAULTS
-        for section in config.sections():
-            if section not in conf_dict:
-                conf_dict[section] = {}
-            for key, val in config.items(section):
-                conf_dict[section][key] = val
+    def __call__(self, value):
+        value = str(value)
 
-        return conf_dict
+        if self.must_exist:
 
-    def _validate(self):
-        self._conf_dict['log']['debug'] = utils.str2bool(
-            self._conf_dict['log']['debug'])
+            if not os.path.exists(value):
+                raise ValueError(f'Could not find {self.path_type} "{value}"')
 
-        self._conf_dict['default']['enable_libvirt'] = utils.str2bool(
-            self._conf_dict['default']['enable_libvirt'])
+            if self.path_type == self.FILE and not os.path.isfile(value):
+                raise ValueError(f'"{value}" is not a path to a regular file')
+            elif self.path_type == self.DIRECTORY and not os.path.isdir(value):
+                raise ValueError(f'"{value}" is not a path to a directory')
 
-        self._conf_dict['default']['enable_ironic'] = utils.str2bool(
-            self._conf_dict['default']['enable_ironic'])
+        return os.path.abspath(value)
 
-        self._conf_dict['default']['show_passwords'] = utils.str2bool(
-            self._conf_dict['default']['show_passwords'])
+    def __repr__(self):
+        return self.path_type.title()
 
-        self._conf_dict['default']['server_port'] = int(
-            self._conf_dict['default']['server_port'])
+    def __eq__(self, other):
+        return all((self.__class__ == other.__class__,
+                    self.path_type == other.path_type,
+                    self.must_exist == other.must_exist))
 
-        self._conf_dict['default']['server_spawn_wait'] = int(
-            self._conf_dict['default']['server_spawn_wait'])
-
-        self._conf_dict['default']['server_response_timeout'] = int(
-            self._conf_dict['default']['server_response_timeout'])
-
-        self._conf_dict['ipmi']['session_timeout'] = int(
-            self._conf_dict['ipmi']['session_timeout'])
-
-    def __getitem__(self, key):
-        return self._conf_dict[key]
+    def _formatter(self, value):
+        return str(value)
 
 
-def get_config():
-    global CONFIG
-    if CONFIG is None:
-        CONFIG = VirtualBMCConfig()
-        CONFIG.initialize()
+class PathOpt(cfg.Opt):
+    def __init__(self, name, path_type=Path.PATH, must_exist=True, **kwargs):
+        super().__init__(name,
+                         type=Path(path_type, must_exist=must_exist),
+                         **kwargs)
 
-    return CONFIG
+
+class FileOpt(PathOpt):
+    def __init__(self, name, must_exist=True, **kwargs):
+        super().__init__(name, Path.FILE, must_exist, **kwargs)
+
+
+class DirectoryOpt(PathOpt):
+    def __init__(self, name, must_exist=True, **kwargs):
+        super().__init__(name, Path.DIRECTORY, must_exist, **kwargs)
+
+
+default_opts = [
+    cfg.BoolOpt('enable_libvirt', default=True),
+    cfg.BoolOpt('enable_ironic', default=True),
+    cfg.BoolOpt('show_passwords', default=False),
+    DirectoryOpt(
+        'config_dir',
+        default=os.path.join(os.path.expanduser('~'), '.vbmc')
+    ),
+    FileOpt(
+        'pid_file',
+        must_exist=False,
+        default=os.path.join(os.path.expanduser('~'), '.vbmc', 'master.pid')
+    ),
+    cfg.PortOpt('server_port', default=50891),
+    cfg.IntOpt('server_response_timeout', default=60000, help='(value in ms)'),
+    cfg.IntOpt('server_spawn_wait', default=3000, help='(value in ms)'),
+]
+
+log_opts = [
+    FileOpt('log_file', default=None),
+    cfg.BoolOpt('debug', default=False),
+]
+
+ipmi_opts = [
+    cfg.IntOpt(
+        'session_timeout',
+        default=1,
+        help='Maximum time (in seconds) to wait for the data to come across'
+    ),
+]
+
+
+CONF.register_opts(default_opts)
+CONF.register_opts(log_opts, group='log')
+CONF.register_opts(ipmi_opts, group='ipmi')

@@ -10,7 +10,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from functools import partial, wraps
+from functools import wraps
 
 import pyghmi.ipmi.bmc as bmc
 
@@ -39,11 +39,11 @@ class VbmcBase(bmc.Bmc):
             def wrapper(self, *args, **kwargs):
                 argument_info = ''
                 debug_str = (f'Calling {func.__name__} for {self.vbmc_type} '
-                              '{self.name}')
+                             '{self.name}')
                 if args or kwargs:
                     if args:
                         args_str = ', '.join(args)
-                        argument_info += ' with args "{args_str}"'
+                        argument_info += f' with args "{args_str}"'
                     if kwargs:
                         kwargs_str = ', '.join(map(lambda k, v: f'{k}={v}',
                                                    kwargs.items()))
@@ -56,8 +56,8 @@ class VbmcBase(bmc.Bmc):
                 try:
                     return func(self, *args, **kwargs)
                 except Exception as e:
-                    error_str = (f'{func.__name__} failed for {self.vbmc_type} '
-                                  '{self.name}')
+                    error_str = (f'{func.__name__} failed for {self.vbmc_type}'
+                                 ' {self.name}')
                     if args or kwargs:
                         error_str += argument_info
                     error_str += f'\nError: {str(e)}'

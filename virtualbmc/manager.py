@@ -17,11 +17,11 @@ import os
 import shutil
 import signal
 
-from virtualbmc import config as vbmc_config
+from virtualbmc import config as application_config
 from virtualbmc import exception
 from virtualbmc import log
 from virtualbmc import utils
-from virtualbmc.vbmc import libvirt
+from virtualbmc import vbmc
 
 LOG = log.get_logger()
 
@@ -32,15 +32,13 @@ ERROR = 'error'
 
 DEFAULT_SECTION = 'VirtualBMC'
 
-CONF = vbmc_config.get_config()
+CONF = application_config.get_config()
 
 
 class VirtualBMCManager(object):
 
-    VBMC_OPTIONS = ['ident', 'password', 'address', 'port', 'name', 'active',
-                    'auth']
-                    'libvirt_uri', 'libvirt_sasl_username',
-                    'libvirt_sasl_password', 'active']
+    VBMC_OPTIONS = ['username', 'password', 'address', 'port', 'name',
+                    'auth', 'active']
 
     def __init__(self):
         super(VirtualBMCManager, self).__init__()
@@ -127,7 +125,7 @@ class VirtualBMCManager(object):
                 show_options = utils.mask_dict_password(bmc_config)
 
             try:
-                vbmc = libvirt.LibvirtVbmc(**bmc_config)
+                bmc = vbmc.libvirt.LibvirtVbmc(**bmc_config)
 
             except Exception as ex:
                 LOG.exception(
@@ -138,7 +136,7 @@ class VirtualBMCManager(object):
                 return
 
             try:
-                vbmc.listen(timeout=CONF['ipmi']['session_timeout'])
+                bmc.listen(timeout=CONF['ipmi']['session_timeout'])
 
             except Exception as ex:
                 LOG.exception(
