@@ -15,15 +15,6 @@ import os
 from oslo_config import cfg
 from oslo_config import types as cfg_types
 
-_CONFIG_FILE_PATHS = (
-    os.environ.get('VIRTUALBMC_CONFIG', ''),
-    os.path.join(os.path.expanduser('~'), '.vbmc', 'virtualbmc.conf'),
-    '/etc/virtualbmc/virtualbmc.conf')
-
-CONFIG_FILE = next((x for x in _CONFIG_FILE_PATHS if os.path.exists(x)), '')
-
-CONF = cfg.CONF
-
 
 class Path(cfg_types.ConfigType):
     PATH = 'path'
