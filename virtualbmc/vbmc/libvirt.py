@@ -24,9 +24,9 @@ LOG = log.get_logger()
 
 class LibvirtVbmc(base.VbmcBase):
 
-    vbmc_type = 'libvirt_domain'
+    vbmc_type = 'libvirt domain'
 
-    def __init__(self, address, port, ident, password, name,
+    def __init__(self, name, username, password, host_address, port,
                  libvirt_uri, libvirt_sasl_username=None,
                  libvirt_sasl_password=None, **kwargs):
         super().__init__(address, port, ident, password, name)

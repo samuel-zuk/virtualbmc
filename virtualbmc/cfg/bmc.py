@@ -11,75 +11,215 @@
 #    under the License.
 
 import os
+import pathlib
 
 from oslo_config import cfg
-from oslo_config import generator
+from oslo_config import generator as gen
 
 from virtualbmc.cfg import CONF
 from virtualbmc import exception
+from virtualbmc import log
+
+LOG = log.get_logger()
 
 
-default_opts = [
-    cfg.StrOpt('bmc_type', choices=('libvirt', 'ironic')),
-    cfg.BoolOpt('enabled', default=False),
-    cfg.IPOpt('host_address', default='127.0.0.1'),
-    cfg.PortOpt('port', default=1623),
-    cfg.StrOpt('username'),
-    cfg.StrOpt('password', secret=CONF['show_passwords']),
-]
+class BMCConfig:
+    BMC_TYPES = ('libvirt', 'ironic')
+    INTERNAL_OPTS = ('config_dir', 'config_file', 'config_source')
 
-libvirt_opts = [
-    cfg.StrOpt('domain_name'),
-    cfg.UriOpt('libvirt_uri', default='qemu://system'),
-    cfg.StrOpt('sasl_username'),
-    cfg.StrOpt('sasl_password', secret=CONF['show_passwords']),
-]
+    _DEFAULT_OPTS = [
+        cfg.StrOpt('bmc_type', choices=BMC_TYPES),
+        cfg.BoolOpt('enabled'),
+        cfg.IPOpt('host_address'),
+        cfg.PortOpt('port'),
+        cfg.StrOpt('username'),
+        cfg.StrOpt('password', secret=CONF['show_passwords']),
+    ]
 
-ironic_opts = [
-    cfg.StrOpt('node_name')
-]
+    _LIBVIRT_OPTS = [
+        cfg.StrOpt('domain_name'),
+        cfg.UriOpt('libvirt_uri'),
+        cfg.StrOpt('sasl_username'),
+        cfg.StrOpt('sasl_password', secret=CONF['show_passwords']),
+    ]
+
+    _IRONIC_OPTS = [
+        cfg.StrOpt('node_uuid'),
+    ]
+
+    def __init__(self, name, conf_dir, bmc_type=None, enabled=False,
+                 username=None, password=None, host_address='127.0.0.1',
+                 port=1623, **kwargs):
+        self.name = name
+        self.bmc_type = bmc_type
+        if self.bmc_type is not None and self.bmc_type not in self.BMC_TYPES:
+            raise ValueError(f'Invalid vBMC type {self.bmc_type}')
+
+        self.conf_dir = pathlib.Path(conf_dir).expanduser().absolute()
+        if not self.conf_dir.exists():
+            self.conf_dir.mkdir(parents=True)
+        elif not self.conf_dir.is_dir():
+            raise ValueError(f'{conf_dir} is not a directory')
+
+        self.conf_file = self.conf_dir / 'vbmc.conf'
+        if not self.conf_file.exists():
+            self.conf_file.touch()
+
+        self.CONF = cfg.ConfigOpts()
+
+        default_opts = {
+            'enabled': enabled, 'host_address', host_address, 'port': port,
+            'username': username, 'password': password
+        }
+        if bmc_type is not None:
+            default_opts['bmc_type'] = bmc_type
+
+        self._default_opts = (
+            self._set_defaults(self._DEFAULT_OPTS, **default_opts))
+        self.CONF.register_opts(self._default_opts)
+
+        if bmc_type is None:
+            self._init_conf()
+            self.bmc_type = self.CONF['bmc_type']
+            kwargs.pop('bmc_type')
+        
+        kwargs = {k: v for k, v in kwargs if k not in default_opts}
+        if self.bmc_type == 'libvirt':
+            self._libvirt_opts = (
+                self._set_defaults(self._LIBVIRT_OPTS, **kwargs))
+            self.CONF.register_opts(self._libvirt_opts, group='libvirt')
+        elif self.bmc_type == 'ironic':
+            self._ironic_opts = (
+                self._set_defaults(self._IRONIC_OPTS, **kwargs))
+            self.CONF.register_opts(self._ironic_opts, group='ironic')
+
+        self._init_conf()
+
+    @staticmethod
+    def _set_defaults(opts, **kwargs):
+        opts = {opt.name: opt for opt in opts}
+        valid_option_names = opts.keys()
+        for (name, value) in kwargs:
+            if name in valid_option_names:
+                opts[name].default = value
+            else:
+                LOG.debug(f'BMCConfig._set_defaults: unknown option {name}')
+        return list(opts.values())
+
+    def _init_conf(self):
+        self.CONF(
+            args=(),
+            project=self.name,
+            prog='vbmc',
+            default_config_files=(str(self.conf_file),),
+            default_config_dirs=(str(self.conf_dir),),
+            validate_default_values=True,
+            use_env=False,
+        )
+
+    def as_dict(self):
+        d = dict(self.CONF, **self.CONF[self.bmc_type])
+        d.pop(self.bmc_type, None)
+        for o in self.INTERNAL_OPTS:
+            d.pop(o, None)
+        return d
+
+    def set(self, opt_name, value, group=None):
+        self.CONF.set_override(opt_name, value, group)
+
+    def write(self):
+        # NOTE: this function is hacked together from pieces of oslo.config's
+        # sample config file generator. i couldn't find any info on how to
+        # generate a config file from a pre-existing ConfigOpts object; it
+        # appears to be something the folks on the oslo.config dev team don't
+        # intend for you to be able to do for whatever reason (not yet, at
+        # least). hence, the weird callable dict and the use of interfaces that
+        # are only really documented in the source code itself, which can be
+        # found at
+        # https://opendev.org/openstack/oslo.config/src/branch/master/oslo_config/generator.py
+        class FormatterConfig(dict):
+            def __getattr__(self, attr):
+                return self[attr]
+            def __setattr__(self, attr, val):
+                self[attr] = val
+
+        namespace = self.CONF._namespace
+        groups = dict({'DEFAULT': self.CONF},
+                      **dict(sorted(self.CONF._groups.items())))
+
+        with open(self.conf_file, 'w') as conf_file:
+            fmt_conf = FormatterConfig((
+                ('output_file', conf_file),
+                ('wrap_width', 79),
+                ('minimal', True),
+                ('summarize', False),
+                ('format', 'ini'),
+            ))
+            fmt = gen._OptFormatter(fmt_conf, conf_file)
+
+            for (group_name, group_obj) in groups.items():
+                fmt.format_group(group_name)
+                for (opt_name, opt) in sorted(group_obj._opts.items()):
+                    if opt_name in self.INTERNAL_OPTS:
+                        continue
+
+                    opt = opt['opt']
+                    opt.default = self.CONF._get(
+                        opt_name, 
+                        group=(None if group_name == 'DEFAULT' else group_obj)
+                    )
+
+                    try:
+                        fmt.write('\n')
+                        fmt.format(opt, group_name)
+                    except Exception as ex:
+                        fmt.write(
+                            '# Warning: Failed to format sample for %s\n'
+                            '# %s\n' % (opt_name, str(ex))
+                        )
+                fmt.write('\n\n')
 
 
-def read_config(name, config_dir):
-    config_path = os.path.join(config_dir, name, 'config')
-    try:
-        config = cfg.ConfigOpts()
-        config.register_opts(default_opts)
-        if CONF['enable_libvirt']:
-            config.register_opts(libvirt_opts, group='libvirt')
-        if CONF['enable_ironic']:
-            config.register_opts(ironic_opts, group='ironic')
-        # config files are actually parsed when the ConfigOpts object is called
-        config(default_config_files=(config_path,))
-        return config
-    except (cfg.ConfigFilesNotFoundError,
-            cfg.ConfigFilesPermissionDeniedError):
-        raise exception.NotFound(name=name)
+def LibvirtBMCConfig(domain_name, libvirt_uri, conf_dir, sasl_username=None,
+                     sasl_username=None, sasl_password=None, enabled=False,
+                     bmc_name=None, bmc_username=None, bmc_password=None,
+                     host_address='127.0.0.1', port=1623):
+        libvirt_opts = [
+            cfg.StrOpt('domain_name', default=domain_name),
+            cfg.UriOpt('libvirt_uri', default=libvirt_uri),
+            cfg.StrOpt('sasl_username', default=sasl_username),
+            cfg.StrOpt('sasl_password', default=sasl_password,
+                       secret=CONF['show_passwords']),
+        ]
+        return BMCConfig(
+            bmc_type='libvirt',
+            name=(bmc_name if bmc_name else domain_name),
+            conf_dir=conf_dir,
+            enabled=enabled,
+            host_address=host_address,
+            port=port,
+            username=bmc_username,
+            password=bmc_password,
+            domain_name=domain_name,
+            libvirt_uri=libvirt_uri
+            extra_cfg_sections={'libvirt': libvirt_opts},
+        )
 
 
-def write_config(config, config_dir):
-    # NOTE: this function is hacked together from pieces of oslo.config's
-    # sample config file generator. i couldn't find any info on how to generate
-    # a config file from a pre-existing ConfigOpts object; it appears to be
-    # something the folks on the oslo.config dev team don't intend for you to
-    # be able to do for whatever reason (not yet, at least). hence, the weird
-    # pseudo-object thing and the use of interfaces that are only really
-    # documented in the source code itself, which can be found at
-    # https://opendev.org/openstack/oslo.config/src/branch/master/oslo_config/generator.py
-
-    config_path = os.path.join(config_dir, config['name'], 'config')
-
-    def Object(**kwargs):
-        return type("Object", (), kwargs)
-
-    formatter_conf = Object(output_file=config_path,
-                            wrap_width=79,
-                            minimal=True,
-                            summarize=False,
-                            format='ini')
-    formatter = generator._OptFormatter(formatter_conf, config_path)
-
-    generator._output_opts(formatter, 'DEFAULT', config['DEFAULT'])
-    for g in sorted(config._groups.keys()):
-        formatter.write('\n\n')
-        generator._output_opts(formatter, g, config[g])
+def IronicBMCConfig(node_uuid, conf_dir, enabled=False, bmc_name=None,
+                    bmc_username=None, bmc_password=None,
+                    host_address='127.0.0.1', port=1623):
+        ironic_opts = [
+            cfg.StrOpt('node_uuid', default=node_ident)
+        ]
+        return BMCConfig(
+            bmc_type='ironic',
+            name=(bmc_name if bmc_name else node_uuid),
+            conf_dir=conf_dir,
+            enabled=enabled,
+            host_address=host_address,
+            port=port,
+            username=bmc_username,
+            password=bmc_password,
+            extra_cfg_sections={'ironic': ironic_opts},
+        )

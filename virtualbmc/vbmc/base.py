@@ -25,11 +25,11 @@ class VbmcBase(bmc.Bmc):
 
     vbmc_type = 'vbmc_base'
 
-    def __init__(self, address, port, ident, password, name=None, **kwargs):
-        super().__init__(authdata={ident: password},
+    def __init__(self, name, username, password, host_address, port, **kwargs):
+        super().__init__(authdata={username: password},
                          port=port,
-                         addresss=address)
-        self.name = 'no-name' if name is None else name
+                         addresss=host_address)
+        self.name = name
 
     @staticmethod
     def bmc_cmd(*args, fail_ok=True):
