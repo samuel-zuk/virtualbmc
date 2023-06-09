@@ -21,11 +21,9 @@ from cliff.lister import Lister
 import zmq
 
 import virtualbmc
-from virtualbmc import config as vbmc_config
+from virtualbmc.conf import CONF
 from virtualbmc.exception import VirtualBMCError
 from virtualbmc import log
-
-CONF = vbmc_config.get_config()
 
 LOG = log.get_logger()
 
@@ -46,7 +44,7 @@ class ZmqClient(object):
     and `rows` attributes pointing to lists of cell values.
     """
 
-    SERVER_TIMEOUT = CONF['default']['server_response_timeout']
+    SERVER_TIMEOUT = CONF['server_response_timeout']
 
     @staticmethod
     def to_dict(obj):
@@ -61,7 +59,7 @@ class ZmqClient(object):
 
         data_out = json.dumps(data_out)
 
-        server_port = CONF['default']['server_port']
+        server_port = CONF['server_port']
 
         context = socket = None
 

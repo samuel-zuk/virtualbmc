@@ -16,7 +16,7 @@ import pathlib
 from oslo_config import cfg
 from oslo_config import generator as gen
 
-from virtualbmc.cfg import CONF
+from virtualbmc.conf import CONF
 from virtualbmc import exception
 from virtualbmc import log
 

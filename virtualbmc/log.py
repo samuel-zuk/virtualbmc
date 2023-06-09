@@ -13,7 +13,7 @@
 import errno
 import logging
 
-from virtualbmc import config
+from virtualbmc.conf import CONF
 
 __all__ = ['get_logger']
 
@@ -49,7 +49,7 @@ class VirtualBMCLogger(logging.Logger):
 def get_logger():
     global LOGGER
     if LOGGER is None:
-        log_conf = config.get_config()['log']
+        log_conf = CONF['log']
         LOGGER = VirtualBMCLogger(debug=log_conf['debug'],
                                   logfile=log_conf['logfile'])
 

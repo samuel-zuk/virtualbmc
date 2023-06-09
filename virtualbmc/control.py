@@ -19,12 +19,10 @@ import sys
 
 import zmq
 
-from virtualbmc import config as vbmc_config
+from virtualbmc.conf import CONF
 from virtualbmc import exception
 from virtualbmc import log
 from virtualbmc.manager import VirtualBMCManager
-
-CONF = vbmc_config.get_config()
 
 LOG = log.get_logger()
 
@@ -46,7 +44,7 @@ def main_loop(vbmc_manager, handle_command):
     outcome of the command, and optionally 2-D table conveyed through the
     `header` and `rows` attributes pointing to lists of cell values.
     """
-    server_port = CONF['default']['server_port']
+    server_port = CONF['server_port']
 
     context = socket = None
 

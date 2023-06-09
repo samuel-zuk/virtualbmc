@@ -17,8 +17,8 @@ import os
 import signal
 import shutil
 
-from virtualbmc.cfg import bmc as cfg
-from virtualbmc.cfg import CONF
+from virtualbmc.conf import bmc as cfg
+from virtualbmc.conf import CONF
 from virtualbmc import exception
 from virtualbmc import log
 from virtualbmc import utils

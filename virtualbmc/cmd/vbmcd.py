@@ -16,15 +16,13 @@ import sys
 import tempfile
 
 import virtualbmc
-from virtualbmc import config as vbmc_config
+from virtualbmc.conf import CONF
 from virtualbmc import control
 from virtualbmc import log
 from virtualbmc import utils
 
 
 LOG = log.get_logger()
-
-CONF = vbmc_config.get_config()
 
 
 def main(argv=sys.argv[1:]):
