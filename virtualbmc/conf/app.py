@@ -28,13 +28,15 @@ default_opts = [
         default=os.path.join(os.path.expanduser('~'), '.vbmc', 'master.pid')
     ),
     cfg.PortOpt('server_port', default=50891),
-    cfg.IntOpt('server_response_timeout', default=60000, help='(value in ms)'),
+    cfg.IntOpt('server_response_timeout', default=10000, help='(value in ms)'),
     cfg.IntOpt('server_spawn_wait', default=3000, help='(value in ms)'),
 ]
 
 log_opts = [
-    cfg.StrOpt('log_file', default=None),
-    cfg.BoolOpt('debug', default=False),
+    cfg.StrOpt('logfile', default=None),
+    cfg.StrOpt('level', default='DEBUG',
+               choices=('DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL')),
+    cfg.BoolOpt('use_stderr', default=True),
 ]
 
 ipmi_opts = [

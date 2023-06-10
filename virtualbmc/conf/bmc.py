@@ -10,14 +10,12 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import os
 import pathlib
 
 from oslo_config import cfg
 from oslo_config import generator as gen
 
 from virtualbmc.conf import CONF
-from virtualbmc import exception
 from virtualbmc import log
 
 LOG = log.get_logger()
@@ -38,7 +36,7 @@ class BMCConfig:
 
     _LIBVIRT_OPTS = [
         cfg.StrOpt('domain_name'),
-        cfg.UriOpt('libvirt_uri'),
+        cfg.URIOpt('libvirt_uri'),
         cfg.StrOpt('sasl_username'),
         cfg.StrOpt('sasl_password', secret=CONF['show_passwords']),
     ]
@@ -68,7 +66,7 @@ class BMCConfig:
         self.CONF = cfg.ConfigOpts()
 
         default_opts = {
-            'enabled': enabled, 'host_address', host_address, 'port': port,
+            'enabled': enabled, 'host_address': host_address, 'port': port,
             'username': username, 'password': password
         }
         if bmc_type is not None:
@@ -82,7 +80,7 @@ class BMCConfig:
             self._init_conf()
             self.bmc_type = self.CONF['bmc_type']
             kwargs.pop('bmc_type')
-        
+
         kwargs = {k: v for k, v in kwargs if k not in default_opts}
         if self.bmc_type == 'libvirt':
             self._libvirt_opts = (
@@ -140,12 +138,9 @@ class BMCConfig:
         class FormatterConfig(dict):
             def __getattr__(self, attr):
                 return self[attr]
+
             def __setattr__(self, attr, val):
                 self[attr] = val
-
-        namespace = self.CONF._namespace
-        groups = dict({'DEFAULT': self.CONF},
-                      **dict(sorted(self.CONF._groups.items())))
 
         with open(self.conf_file, 'w') as conf_file:
             fmt_conf = FormatterConfig((
@@ -156,6 +151,8 @@ class BMCConfig:
                 ('format', 'ini'),
             ))
             fmt = gen._OptFormatter(fmt_conf, conf_file)
+            groups = dict({'DEFAULT': self.CONF},
+                          **dict(sorted(self.CONF._groups.items())))
 
             for (group_name, group_obj) in groups.items():
                 fmt.format_group(group_name)
@@ -165,7 +162,7 @@ class BMCConfig:
 
                     opt = opt['opt']
                     opt.default = self.CONF._get(
-                        opt_name, 
+                        opt_name,
                         group=(None if group_name == 'DEFAULT' else group_obj)
                     )
 
@@ -178,48 +175,3 @@ class BMCConfig:
                             '# %s\n' % (opt_name, str(ex))
                         )
                 fmt.write('\n\n')
-
-
-def LibvirtBMCConfig(domain_name, libvirt_uri, conf_dir, sasl_username=None,
-                     sasl_username=None, sasl_password=None, enabled=False,
-                     bmc_name=None, bmc_username=None, bmc_password=None,
-                     host_address='127.0.0.1', port=1623):
-        libvirt_opts = [
-            cfg.StrOpt('domain_name', default=domain_name),
-            cfg.UriOpt('libvirt_uri', default=libvirt_uri),
-            cfg.StrOpt('sasl_username', default=sasl_username),
-            cfg.StrOpt('sasl_password', default=sasl_password,
-                       secret=CONF['show_passwords']),
-        ]
-        return BMCConfig(
-            bmc_type='libvirt',
-            name=(bmc_name if bmc_name else domain_name),
-            conf_dir=conf_dir,
-            enabled=enabled,
-            host_address=host_address,
-            port=port,
-            username=bmc_username,
-            password=bmc_password,
-            domain_name=domain_name,
-            libvirt_uri=libvirt_uri
-            extra_cfg_sections={'libvirt': libvirt_opts},
-        )
-
-
-def IronicBMCConfig(node_uuid, conf_dir, enabled=False, bmc_name=None,
-                    bmc_username=None, bmc_password=None,
-                    host_address='127.0.0.1', port=1623):
-        ironic_opts = [
-            cfg.StrOpt('node_uuid', default=node_ident)
-        ]
-        return BMCConfig(
-            bmc_type='ironic',
-            name=(bmc_name if bmc_name else node_uuid),
-            conf_dir=conf_dir,
-            enabled=enabled,
-            host_address=host_address,
-            port=port,
-            username=bmc_username,
-            password=bmc_password,
-            extra_cfg_sections={'ironic': ironic_opts},
-        )

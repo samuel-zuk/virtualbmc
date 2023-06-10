@@ -257,7 +257,7 @@ class ShowCommand(Lister):
 class VirtualBMCApp(App):
 
     def __init__(self):
-        super(VirtualBMCApp, self).__init__(
+        super().__init__(
             description='Virtual Baseboard Management Controller (BMC) backed '
                         'by virtual machines',
             version=virtualbmc.__version__,

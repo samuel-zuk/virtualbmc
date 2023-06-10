@@ -12,8 +12,10 @@
 
 from oslo_config import cfg
 
-from virtualbmc.cfg import app
+from virtualbmc.conf import app
 
+
+cfg.CONF = cfg.ConfigOpts()
 
 CONF = cfg.CONF
 

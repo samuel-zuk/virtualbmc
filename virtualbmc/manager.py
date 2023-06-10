@@ -34,7 +34,7 @@ ERROR = 'error'
 
 class VirtualBMCManager(object):
     def __init__(self):
-        self.config_dir = CONF['default']['config_dir']
+        self.config_dir = CONF['config_dir']
         self._running_instances = {}
 
     def _bmc_exists(self, name):
@@ -99,7 +99,8 @@ class VirtualBMCManager(object):
         self.sync_vbmc_states(shutdown)
 
     def add_libvirt(self, name, domain_name, bmc_username, bmc_password,
-                    address, port, libvirt_uri, sasl_username, sasl_password):
+                    host_address, port, libvirt_uri, sasl_username,
+                    sasl_password):
         if os.path.exists(os.path.join(os.path.config_dir, name)):
             msg = f'Error creating vBMC {name}: config dir already exists'
             LOG.error(msg)
@@ -112,7 +113,6 @@ class VirtualBMCManager(object):
             cfg.BMCConfig(bmc_type='libvirt',
                           name=name,
                           conf_dir=self.config_dir,
-                          enabled=enabled,
                           host_address=host_address,
                           port=port,
                           username=bmc_username,
@@ -120,7 +120,7 @@ class VirtualBMCManager(object):
                           domain_name=domain_name,
                           libvirt_uri=libvirt_uri,
                           sasl_username=sasl_username,
-                          sasl_password=sasl_passsword)
+                          sasl_password=sasl_password)
             cfg.write()
         except Exception as ex:
             self.delete(name)
@@ -155,7 +155,7 @@ class VirtualBMCManager(object):
                 LOG.warning(f'BMC instance {name} already running, ignoring '
                             '"start" command')
                 return 0, ''
-        
+
         try:
             if not bmc_config.CONF.get('enabled', None):
                 bmc_config.set('enabled', True)
@@ -187,13 +187,13 @@ class VirtualBMCManager(object):
 
         self.sync_vbmc_states()
         return 0, ''
-        
+
     def list(self):
         rc = 0
         tables = []
         try:
             for name in os.listdir(self.config_dir):
-                if _bmc_exists(name):
+                if self._bmc_exists(name):
                     tables.append(self._get_as_dict(name))
         except OSError as ex:
             if ex.errno == errno.EEXIST:
@@ -204,7 +204,7 @@ class VirtualBMCManager(object):
     def _get_as_dict(self, name):
         bmc_config = cfg.BMCConfig(name, self.config_dir)
         show_options = bmc_config.as_dict()
-        
+
         instance = self._running_instances.get(name)
 
         if instance and instance.is_alive():

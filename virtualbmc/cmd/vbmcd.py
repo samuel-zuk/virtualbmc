@@ -39,7 +39,7 @@ def main(argv=sys.argv[1:]):
 
     args = parser.parse_args(argv)
 
-    pid_file = CONF['default']['pid_file']
+    pid_file = CONF['pid_file']
 
     try:
         with open(pid_file) as f:

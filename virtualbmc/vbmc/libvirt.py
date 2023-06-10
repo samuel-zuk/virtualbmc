@@ -23,13 +23,13 @@ LOG = log.get_logger()
 
 
 class LibvirtVbmc(base.VbmcBase):
-
+    bmc_cmd = base.VbmcBase.bmc_cmd
     vbmc_type = 'libvirt domain'
 
     def __init__(self, name, username, password, host_address, port,
                  libvirt_uri, libvirt_sasl_username=None,
                  libvirt_sasl_password=None, **kwargs):
-        super().__init__(address, port, ident, password, name)
+        super().__init__(host_address, port, username, password, name)
         self._conn_args = {'uri': libvirt_uri,
                            'sasl_username': libvirt_sasl_username,
                            'sasl_password': libvirt_sasl_password}
@@ -49,7 +49,7 @@ class LibvirtVbmc(base.VbmcBase):
         for boot_element in parent_element.findall('boot'):
             parent_element.remove(boot_element)
 
-    @base.VbmcBase.bmc_cmd
+    @bmc_cmd
     def get_boot_device(self):
         with utils.libvirt_open(readonly=True, **self._conn_args) as conn:
             domain = utils.get_libvirt_domain(conn, self.name)
@@ -59,7 +59,7 @@ class LibvirtVbmc(base.VbmcBase):
                 boot_dev = boot_element.attrib.get('dev')
         return constants.GET_BOOT_DEVICES_MAP.get(boot_dev, 0)
 
-    @base.VbmcBase.bmc_cmd
+    @bmc_cmd
     def set_boot_device(self, bootdevice):
         device = constants.SET_BOOT_DEVICES_MAP.get(bootdevice)
         if device is None:
@@ -86,7 +86,7 @@ class LibvirtVbmc(base.VbmcBase):
 
             conn.defineXML(ET.tostring(tree, encoding="unicode"))
 
-    @base.VbmcBase.bmc_cmd(fail_ok=False)
+    @bmc_cmd(fail_ok=False)
     def get_power_state(self):
         with utils.libvirt_open(readonly=True, **self._conn_args) as conn:
             domain = utils.get_libvirt_domain(conn, self.name)
@@ -95,35 +95,35 @@ class LibvirtVbmc(base.VbmcBase):
             else:
                 return constants.POWEROFF
 
-    @base.VbmcBase.bmc_cmd
+    @bmc_cmd
     def pulse_diag(self):
         with utils.libvirt_open(**self._conn_args) as conn:
             domain = utils.get_libvirt_domain(conn, self.name)
             if domain.isActive():
                 domain.injectNMI()
 
-    @base.VbmcBase.bmc_cmd
+    @bmc_cmd
     def power_off(self):
         with utils.libvirt_open(**self._conn_args) as conn:
             domain = utils.get_libvirt_domain(conn, self.name)
             if domain.isActive():
                 domain.destroy()
 
-    @base.VbmcBase.bmc_cmd
+    @bmc_cmd
     def power_on(self):
         with utils.libvirt_open(**self._conn_args) as conn:
             domain = utils.get_libvirt_domain(conn, self.name)
             if not domain.isActive():
                 domain.create()
 
-    @base.VbmcBase.bmc_cmd
+    @bmc_cmd
     def power_shutdown(self):
         with utils.libvirt_open(**self._conn_args) as conn:
             domain = utils.get_libvirt_domain(conn, self.name)
             if domain.isActive():
                 domain.shutdown()
 
-    @base.VbmcBase.bmc_cmd
+    @bmc_cmd
     def power_reset(self):
         with utils.libvirt_open(**self._conn_args) as conn:
             domain = utils.get_libvirt_domain(conn, self.name)
