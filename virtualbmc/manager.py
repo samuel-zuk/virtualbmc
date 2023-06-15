@@ -34,7 +34,7 @@ ERROR = 'error'
 
 class VirtualBMCManager(object):
     def __init__(self):
-        self.config_dir = CONF['config_dir']
+        self.config_dir = CONF['config_dir'][0]
         self._running_instances = {}
 
     def _bmc_exists(self, name):

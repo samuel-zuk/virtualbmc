@@ -10,10 +10,11 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import argparse
 import os
 import sys
 import tempfile
+
+from oslo_config import cfg
 
 import virtualbmc
 from virtualbmc.conf import CONF
@@ -26,20 +27,18 @@ LOG = log.get_logger()
 
 
 def main(argv=sys.argv[1:]):
-    parser = argparse.ArgumentParser(
+    CONF.register_cli_opt(
+        cfg.BoolOpt('foreground', default=False, help='Do not daemonize')
+    )
+    CONF(
         prog='VirtualBMC server',
         description='A virtual BMC server for controlling virtual instances',
+        default_config_dirs=('.vbmc',),
     )
-    parser.add_argument('--version', action='version',
-                        version=virtualbmc.__version__)
-    parser.add_argument('--foreground',
-                        action='store_true',
-                        default=False,
-                        help='Do not daemonize')
+    # parser.add_argument('--version', action='version',
+    #                     version=virtualbmc.__version__)
 
-    args = parser.parse_args(argv)
-
-    pid_file = CONF['pid_file']
+    pid_file = os.path.abspath(CONF['pid_file'])
 
     try:
         with open(pid_file) as f:
@@ -79,7 +78,7 @@ def main(argv=sys.argv[1:]):
             except Exception:
                 pass
 
-    if args.foreground:
+    if CONF['foreground']:
         return wrap_with_pidfile(control.application, os.getpid())
 
     else:

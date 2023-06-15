@@ -12,12 +12,15 @@
 
 from oslo_config import cfg
 
-from virtualbmc.conf import default
-from virtualbmc.conf import log
-from virtualbmc.conf import ipmi
 
-CONF = cfg.CONF
+ipmi_opts = [
+    cfg.IntOpt(
+        'session_timeout',
+        default=1,
+        help='Maximum time to wait for the data to come across (in seconds)',
+    ),
+]
 
-default.register_opts(CONF)
-log.register_opts(CONF)
-ipmi.register_opts(CONF)
+
+def register_opts(conf):
+    conf.register_opts(ipmi_opts, group='ipmi')

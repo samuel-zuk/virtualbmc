@@ -10,27 +10,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import os
-
 from oslo_config import cfg
 
-
-default_opts = [
-    cfg.BoolOpt('enable_libvirt', default=True),
-    cfg.BoolOpt('enable_ironic', default=True),
-    cfg.BoolOpt('show_passwords', default=False),
-    cfg.StrOpt(
-        'config_dir',
-        default=os.path.join(os.path.expanduser('~'), '.vbmc')
-    ),
-    cfg.StrOpt(
-        'pid_file',
-        default=os.path.join(os.path.expanduser('~'), '.vbmc', 'master.pid')
-    ),
-    cfg.PortOpt('server_port', default=50891),
-    cfg.IntOpt('server_response_timeout', default=10000, help='(value in ms)'),
-    cfg.IntOpt('server_spawn_wait', default=3000, help='(value in ms)'),
-]
 
 log_opts = [
     cfg.StrOpt('logfile', default=None),
@@ -39,16 +20,5 @@ log_opts = [
     cfg.BoolOpt('use_stderr', default=True),
 ]
 
-ipmi_opts = [
-    cfg.IntOpt(
-        'session_timeout',
-        default=1,
-        help='Maximum time (in seconds) to wait for the data to come across'
-    ),
-]
-
-
 def register_opts(conf):
-    conf.register_opts(default_opts)
     conf.register_opts(log_opts, group='log')
-    conf.register_opts(ipmi_opts, group='ipmi')

@@ -22,6 +22,7 @@ import zmq
 
 import virtualbmc
 from virtualbmc.conf import CONF
+from virtualbmc.conf import bmc as bmc_conf
 from virtualbmc.exception import VirtualBMCError
 from virtualbmc import log
 
@@ -119,59 +120,11 @@ class AddCommand(Command):
     """Create a new BMC for a virtual machine instance"""
 
     def get_parser(self, prog_name):
-        parser = super(AddCommand, self).get_parser(prog_name)
+        self.config = bmc_conf.BMCConfig()
 
-        parser.add_argument('domain_name',
-                            help='The name of the virtual machine')
-        parser.add_argument('--username',
-                            dest='username',
-                            default='admin',
-                            help='The BMC username; defaults to "admin"')
-        parser.add_argument('--password',
-                            dest='password',
-                            default='password',
-                            help='The BMC password; defaults to "password"')
-        parser.add_argument('--port',
-                            dest='port',
-                            type=int,
-                            default=623,
-                            help='Port to listen on; defaults to 623')
-        parser.add_argument('--address',
-                            dest='address',
-                            default='::',
-                            help=('The address to bind to (IPv4 and IPv6 '
-                                  'are supported); defaults to ::'))
-        parser.add_argument('--libvirt-uri',
-                            dest='libvirt_uri',
-                            default="qemu:///system",
-                            help=('The libvirt URI; defaults to '
-                                  '"qemu:///system"'))
-        parser.add_argument('--libvirt-sasl-username',
-                            dest='libvirt_sasl_username',
-                            default=None,
-                            help=('The libvirt SASL username; defaults to '
-                                  'None'))
-        parser.add_argument('--libvirt-sasl-password',
-                            dest='libvirt_sasl_password',
-                            default=None,
-                            help=('The libvirt SASL password; defaults to '
-                                  'None'))
-        return parser
+        return self.config.get_parser()
 
     def take_action(self, args):
-
-        log = logging.getLogger(__name__)
-
-        # Check if the username and password were given for SASL
-        sasl_user = args.libvirt_sasl_username
-        sasl_pass = args.libvirt_sasl_password
-        if any((sasl_user, sasl_pass)):
-            if not all((sasl_user, sasl_pass)):
-                msg = ("A password and username are required to use "
-                       "Libvirt's SASL authentication")
-                log.error(msg)
-                raise VirtualBMCError(msg)
-
         self.app.zmq.communicate(
             'add', args, no_daemon=self.app.options.no_daemon
         )
@@ -238,7 +191,6 @@ class ListCommand(Lister):
 
 class ShowCommand(Lister):
     """Show virtual BMC properties"""
-
     def get_parser(self, prog_name):
         parser = super(ShowCommand, self).get_parser(prog_name)
 
