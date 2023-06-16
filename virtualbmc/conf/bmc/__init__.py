@@ -17,6 +17,7 @@ from oslo_config import generator as gen
 
 from virtualbmc.conf import CONF as APP_CONF
 from virtualbmc.conf.bmc import default as conf_default
+from virtualbmc.conf.bmc import ironic as conf_ironic
 from virtualbmc.conf.bmc import libvirt as conf_libvirt
 from virtualbmc import log
 
@@ -57,18 +58,17 @@ class BMCConfig:
         if self.bmc_type == 'libvirt':
             conf_libvirt.register_opts(self.CONF)
 
-
-    def _set_from_kwargs(self, kwargs, options, group=None):
+    def _set_from_kwargs(self, options, kwargs, group=None):
         """Sets options that were specified as kwargs for a given group."""
         for opt in options:
             # opt.dest is opt.name but with '-' replaced with '_'
             if opt.dest in kwargs.keys():
-                self.set(opt.name, kwargs[opt.dest])
+                self.set(opt.dest, kwargs[opt.dest], group)
                 kwargs.pop(opt.dest)
         return kwargs
 
     def _prepare_config_files(self):
-        base_dir = APP_CONF['config_dir']
+        base_dir = APP_CONF['config_dir'][0]
 
         # the / operator is like os.path.join() but for pathlib
         conf_dir = pathlib.Path(base_dir).expanduser().absolute() / self.name
@@ -83,7 +83,7 @@ class BMCConfig:
         if not conf_path.exists():
             conf_path.touch()
         elif not conf_path.is_file():
-            raise ValueError(f'{str(conf_file)} is not a file')
+            raise ValueError(f'{str(conf_path)} is not a file')
 
         self.conf_path = conf_path
 
@@ -108,16 +108,16 @@ class BMCConfig:
         self.bmc_type = bmc_type
         self.name = name
 
-        self._prepare_config_files(name)
+        self._prepare_config_files()
 
         kwargs = self._set_from_kwargs(conf_default.default_opts, kwargs)
 
         if self.bmc_type == 'libvirt':
             conf_libvirt.register_opts(self.CONF)
-            self._set_from_kwargs(conf_libvirt.libvirt_opts, kwargs)
-        # elif self.bmc_type == 'ironic':
-        #     conf_ironic.register_opts(self.CONF)
-        #     self._parse_from_kwargs(conf_ironic.ironic_opts, kwargs)
+            self._set_from_kwargs(conf_libvirt.libvirt_opts, kwargs, group='libvirt')
+        elif self.bmc_type == 'ironic':
+            conf_ironic.register_opts(self.CONF)
+            self._set_from_kwargs(conf_ironic.ironic_opts, kwargs, group='ironic')
 
     def load(self, name):
         self.name = name
@@ -129,8 +129,8 @@ class BMCConfig:
         
         if self.bmc_type == 'libvirt':
             conf_libvirt.register_opts(self.CONF)
-        # elif self.bmc_type == 'ironic':
-        #     conf_ironic.register_opts(self.CONF)
+        elif self.bmc_type == 'ironic':
+            conf_ironic.register_opts(self.CONF)
 
         self._parse()
 

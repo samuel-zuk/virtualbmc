@@ -10,15 +10,28 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-# Power states
-POWEROFF = 0
-POWERON = 1
+from oslo_config import cfg
 
-# From the IPMI - Intelligent Platform Management Interface Specification
-# Second Generation v2.0 Document Revision 1.1 October 1, 2013
-# https://www.intel.com/content/dam/www/public/us/en/documents/product-briefs/ipmi-second-gen-interface-spec-v2-rev1-1.pdf
-#
-# Command failed and can be retried
-IPMI_COMMAND_NODE_BUSY = 0xC0
-# Invalid data field in request
-IPMI_INVALID_DATA = 0xcc
+
+ironic_opts = [
+    cfg.StrOpt(
+        'node-uuid',
+        default=None,
+        help='The UUID of the Ironic node',
+    ),
+    cfg.StrOpt(
+        'cloud',
+        default='overcloud',
+        help='The name of the OpenStack cloud to connect to',
+    ),
+    cfg.StrOpt(
+        'region',
+        default='regionOne',
+        help='The OpenStack identity region of this node',
+    ),
+]
+
+
+def register_opts(conf):
+    conf.register_cli_opts(ironic_opts, group='ironic')
+    conf.register_opts(ironic_opts, group='ironic')

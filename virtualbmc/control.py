@@ -124,16 +124,6 @@ def command_dispatcher(vbmc_manager, data_in):
     LOG.debug('Running "%(cmd)s" command handler', {'cmd': command})
 
     if command == 'add':
-
-        # Check if the username and password were given for SASL
-        # sasl_user = data_in['libvirt_sasl_username']
-        # sasl_pass = data_in['libvirt_sasl_password']
-        # if any((sasl_user, sasl_pass)):
-        #     if not all((sasl_user, sasl_pass)):
-        #         error = ("A password and username are required to use "
-        #                  "Libvirt's SASL authentication")
-        #         return {'msg': [error], 'rc': 1}
-
         rc, msg = vbmc_manager.add(**data_in)
 
         return {

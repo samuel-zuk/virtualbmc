@@ -121,7 +121,9 @@ class AddCommand(Command):
     """Create a new BMC for a virtual machine instance"""
 
     def get_parser(self, prog_name):
-        self.config = bmc_conf.BMCConfig('libvirt')
+        self.config = bmc_conf.BMCConfig()
+        bmc_conf.libvirt.register_opts(self.config.CONF)
+        bmc_conf.ironic.register_opts(self.config.CONF)
 
         def parse_args(args=None, config=None):
             config.CONF(
@@ -141,7 +143,14 @@ class AddCommand(Command):
     def take_action(self, conf):
         def Object(**kwargs):
             return type('Object', (), kwargs)
-        args = Object(**conf.as_dict())
+
+        d = dict(conf.CONF, **conf.CONF['libvirt'], **conf.CONF['ironic'])
+        d.pop('libvirt', None)
+        d.pop('ironic', None)
+        for o in bmc_conf.INTERNAL_OPTS:
+            d.pop(o, None)
+        args = Object(**d)
+
         self.app.zmq.communicate(
             'add', args, no_daemon=self.app.options.no_daemon
         )

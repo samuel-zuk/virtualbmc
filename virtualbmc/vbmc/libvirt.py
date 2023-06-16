@@ -21,6 +21,18 @@ from virtualbmc.vbmc import constants
 
 LOG = log.get_logger()
 
+GET_BOOT_DEVICES_MAP = {
+    'network': 4,
+    'hd': 8,
+    'cdrom': 0x14,
+}
+
+SET_BOOT_DEVICES_MAP = {
+    'network': 'network',
+    'hd': 'hd',
+    'optical': 'cdrom',
+}
+
 
 class LibvirtVbmc(base.VbmcBase):
     bmc_cmd = base.VbmcBase.bmc_cmd
@@ -57,11 +69,11 @@ class LibvirtVbmc(base.VbmcBase):
             boot_dev = None
             if boot_element is not None:
                 boot_dev = boot_element.attrib.get('dev')
-        return constants.GET_BOOT_DEVICES_MAP.get(boot_dev, 0)
+        return GET_BOOT_DEVICES_MAP.get(boot_dev, 0)
 
     @bmc_cmd
     def set_boot_device(self, bootdevice):
-        device = constants.SET_BOOT_DEVICES_MAP.get(bootdevice)
+        device = SET_BOOT_DEVICES_MAP.get(bootdevice)
         if device is None:
             # Invalid data field in request
             return constants.IPMI_INVALID_DATA

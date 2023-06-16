@@ -34,7 +34,10 @@ ERROR = 'error'
 
 class VirtualBMCManager(object):
     def __init__(self):
-        self.config_dir = CONF['config_dir'][0]
+        self.config_dir = CONF['config_dir']
+
+        if type(self.config_dir) is list:
+            self.config_dir = self.config_dir[0]
         self._running_instances = {}
 
     def _bmc_exists(self, name):
@@ -53,6 +56,8 @@ class VirtualBMCManager(object):
             try:
                 if bmc_config['bmc_type'] == 'libvirt':
                     bmc = vbmc.libvirt.LibvirtVbmc(**bmc_config)
+                elif bmc_config['bmc_type'] == 'ironic':
+                    bmc = vbmc.ironic.IronicVbmc(**bmc_config)
                 else:
                     bmc = vbmc.base.VbmcBase(**bmc_config)
                 bmc.listen(timeout=CONF['ipmi']['session_timeout'])
@@ -111,15 +116,24 @@ class VirtualBMCManager(object):
             return 1, msg
 
         kwargs.pop('enabled', None)
-        if kwargs['bmc_type'] == 'libvirt':
-            kwargs.pop('bmc_type')
+        bmc_type = kwargs.pop('bmc_type')
+        if bmc_type == 'libvirt':
             return self.add_libvirt(**kwargs)
+        elif bmc_type == 'ironic':
+            return self.add_ironic(**kwargs)
 
 
-    def add_libvirt(self, name, domain_name, username, password,
-                    host_ip, port, uri, sasl_username, sasl_password):
+    def add_libvirt(self, name, domain_name, username, password, host_ip,
+                    port, uri, sasl_username, sasl_password, **kwargs):
         if self._bmc_exists(name):
             msg = f'Error creating vBMC {name}: config dir already exists'
+            LOG.error(msg)
+            return 1, msg
+
+        sasl_creds = (sasl_username, sasl_password)
+        if any(sasl_creds) and not all(sasl_creds):
+            msg = ("A password and username are required to use "
+                   "Libvirt's SASL authentication")
             LOG.error(msg)
             return 1, msg
 
@@ -141,6 +155,33 @@ class VirtualBMCManager(object):
                               uri=uri,
                               sasl_username=sasl_username,
                               sasl_password=sasl_password)
+            bmc_config.write()
+        except Exception as ex:
+            self.delete(name)
+            msg = f'Error creating vBMC {name}: {str(ex)}'
+            LOG.error(msg)
+            return 1, msg
+
+        return 0, ''
+
+    def add_ironic(self, name, domain_name, username, password,
+                    host_ip, port, node_uuid, cloud, region, **kwargs):
+        if self._bmc_exists(name):
+            msg = f'Error creating vBMC {name}: config dir already exists'
+            LOG.error(msg)
+            return 1, msg
+
+        try:
+            bmc_config = cfg.BMCConfig('ironic')
+            bmc_config.create(bmc_type='ironic',
+                              name=name,
+                              host_ip=host_ip,
+                              port=port,
+                              username=username,
+                              password=password,
+                              node_uuid=node_uuid,
+                              cloud=cloud,
+                              region=region)
             bmc_config.write()
         except Exception as ex:
             self.delete(name)
