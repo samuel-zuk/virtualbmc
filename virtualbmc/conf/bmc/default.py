@@ -19,6 +19,7 @@ default_opts = {
     'name': cfg.StrOpt(
         'name',
         # positional=True,
+        default=None,
         help='The name of this vBMC.'
     ),
     'bmc_type': cfg.StrOpt(
@@ -56,7 +57,7 @@ default_opts = {
     ),
 }
 
-_cli_opts = ['name', 'host_ip', 'port', 'username', 'password']
+_cli_opts = ['name', 'bmc_type', 'host_ip', 'port', 'username', 'password']
 
 
 def register_opts(conf):

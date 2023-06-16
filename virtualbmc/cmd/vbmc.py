@@ -10,6 +10,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from functools import partial
 import json
 import logging
 import sys
@@ -120,11 +121,27 @@ class AddCommand(Command):
     """Create a new BMC for a virtual machine instance"""
 
     def get_parser(self, prog_name):
-        self.config = bmc_conf.BMCConfig()
+        self.config = bmc_conf.BMCConfig('libvirt')
 
-        return self.config.get_parser()
+        def parse_args(args=None, config=None):
+            config.CONF(
+                args=args,
+                prog='vbmc add',
+                version=virtualbmc.__version__,
+                description='Create a new BMC for a virtual machine instance',
+                use_env=False,
+            ) 
+            return config
 
-    def take_action(self, args):
+        parser = self.config.get_parser()
+        parser.parse_args = partial(parse_args, config=self.config)
+
+        return parser
+
+    def take_action(self, conf):
+        def Object(**kwargs):
+            return type('Object', (), kwargs)
+        args = Object(**conf.as_dict())
         self.app.zmq.communicate(
             'add', args, no_daemon=self.app.options.no_daemon
         )

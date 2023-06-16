@@ -14,9 +14,9 @@ from oslo_config import cfg
 
 
 libvirt_opts = [
-    cfg.URIOpt(
+    cfg.StrOpt(
         'uri',
-        default='qemu://system',
+        default='qemu:///system',
         help='The libvirt connection URI to use',
     ),
     cfg.StrOpt(

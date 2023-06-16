@@ -69,7 +69,8 @@ class VirtualBMCManager(object):
             if not self._bmc_exists(name):
                 continue
 
-            bmc_config = cfg.BMCConfig(name, self.config_dir).CONF
+            bmc_config = cfg.BMCConfig().load(name).CONF
+
             bmc_type = bmc_config['bmc_type']
             should_enable = False if shutdown else bmc_config['enabled']
             instance = self._running_instances.get(name)
@@ -98,30 +99,49 @@ class VirtualBMCManager(object):
     def periodic(self, shutdown=False):
         self.sync_vbmc_states(shutdown)
 
-    def add_libvirt(self, name, domain_name, bmc_username, bmc_password,
-                    host_address, port, libvirt_uri, sasl_username,
-                    sasl_password):
-        if os.path.exists(os.path.join(os.path.config_dir, name)):
+    def add(self, **kwargs):
+        if 'bmc_type' not in kwargs or kwargs['bmc_type'] is None:
+            msg = 'Error adding vBMC: bmc type not specified'
+            LOG.error(msg)
+            return 1, msg
+
+        if 'name' not in kwargs or kwargs['name'] is None:
+            msg =  'vbmc add error: name must be specified'
+            LOG.error(msg)
+            return 1, msg
+
+        kwargs.pop('enabled', None)
+        if kwargs['bmc_type'] == 'libvirt':
+            kwargs.pop('bmc_type')
+            return self.add_libvirt(**kwargs)
+
+
+    def add_libvirt(self, name, domain_name, username, password,
+                    host_ip, port, uri, sasl_username, sasl_password):
+        if self._bmc_exists(name):
             msg = f'Error creating vBMC {name}: config dir already exists'
             LOG.error(msg)
             return 1, msg
 
         utils.check_libvirt_connection_and_domain(
-            libvirt_uri, domain_name, sasl_username, sasl_password)
+            uri, domain_name, sasl_username, sasl_password)
+
+        if domain_name is None:
+            domain_name = name
 
         try:
-            cfg.BMCConfig(bmc_type='libvirt',
-                          name=name,
-                          conf_dir=self.config_dir,
-                          host_address=host_address,
-                          port=port,
-                          username=bmc_username,
-                          password=bmc_password,
-                          domain_name=domain_name,
-                          libvirt_uri=libvirt_uri,
-                          sasl_username=sasl_username,
-                          sasl_password=sasl_password)
-            cfg.write()
+            bmc_config = cfg.BMCConfig('libvirt')
+            bmc_config.create(bmc_type='libvirt',
+                              name=name,
+                              host_ip=host_ip,
+                              port=port,
+                              username=username,
+                              password=password,
+                              domain_name=domain_name,
+                              uri=uri,
+                              sasl_username=sasl_username,
+                              sasl_password=sasl_password)
+            bmc_config.write()
         except Exception as ex:
             self.delete(name)
             msg = f'Error creating vBMC {name}: {str(ex)}'
@@ -173,7 +193,7 @@ class VirtualBMCManager(object):
         if not self._bmc_exists(name):
             raise exception.NotFound(name=name)
 
-        bmc_config = cfg.BMCConfig(name, self.config_dir)
+        bmc_config = cfg.BMCConfig().load(name)
 
         try:
             if bmc_config.CONF.get('enabled', None):
@@ -202,7 +222,7 @@ class VirtualBMCManager(object):
         return rc, tables
 
     def _get_as_dict(self, name):
-        bmc_config = cfg.BMCConfig(name, self.config_dir)
+        bmc_config = cfg.BMCConfig().load(name)
         show_options = bmc_config.as_dict()
 
         instance = self._running_instances.get(name)
