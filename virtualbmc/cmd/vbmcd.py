@@ -33,10 +33,9 @@ def main(argv=sys.argv[1:]):
     CONF(
         prog='VirtualBMC server',
         description='A virtual BMC server for controlling virtual instances',
+        version=virtualbmc.__version__,
         default_config_dirs=('.vbmc',),
     )
-    # parser.add_argument('--version', action='version',
-    #                     version=virtualbmc.__version__)
 
     pid_file = os.path.abspath(CONF['pid_file'])
 
@@ -50,7 +49,7 @@ def main(argv=sys.argv[1:]):
         pass
 
     else:
-        LOG.error('server PID #%(pid)d still running', {'pid': pid})
+        LOG.exception('server PID #%(pid)d still running', {'pid': pid})
         return 1
 
     def wrap_with_pidfile(func, pid):
@@ -68,7 +67,7 @@ def main(argv=sys.argv[1:]):
             func()
 
         except Exception as e:
-            LOG.error('%(error)s', {'error': e})
+            LOG.exception('%(error)s', {'error': e})
             return 1
 
         finally:

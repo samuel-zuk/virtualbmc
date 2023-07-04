@@ -85,7 +85,7 @@ def main_loop(vbmc_manager, handle_command):
 
             except exception.VirtualBMCError as ex:
                 msg = 'Command failed: %(error)s' % {'error': ex}
-                LOG.error(msg)
+                LOG.exception(msg)
                 data_out = {
                     'rc': 1,
                     'msg': [msg]
@@ -206,7 +206,7 @@ def application():
         LOG.info('Got keyboard interrupt, exiting')
         vbmc_manager.periodic(shutdown=True)
     except Exception as ex:
-        LOG.error(
+        LOG.exception(
             'Control server error: %(error)s', {'error': ex}
         )
         vbmc_manager.periodic(shutdown=True)

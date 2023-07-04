@@ -74,7 +74,8 @@ class VirtualBMCManager(object):
             if not self._bmc_exists(name):
                 continue
 
-            bmc_config = cfg.BMCConfig().load(name).CONF
+            bmc_config = cfg.BMCConfig()
+            bmc_config.load(name)
 
             bmc_type = bmc_config['bmc_type']
             should_enable = False if shutdown else bmc_config['enabled']
@@ -111,25 +112,29 @@ class VirtualBMCManager(object):
             return 1, msg
 
         if 'name' not in kwargs or kwargs['name'] is None:
-            msg =  'vbmc add error: name must be specified'
+            msg = 'vbmc add error: name must be specified'
+            LOG.error(msg)
+            return 1, msg
+
+        if self._bmc_exists(kwargs['name']):
+            msg = f'Error creating vBMC {name}: config dir already exists'
             LOG.error(msg)
             return 1, msg
 
         kwargs.pop('enabled', None)
         bmc_type = kwargs.pop('bmc_type')
-        if bmc_type == 'libvirt':
-            return self.add_libvirt(**kwargs)
-        elif bmc_type == 'ironic':
-            return self.add_ironic(**kwargs)
-
+        try:
+            if bmc_type == 'libvirt':
+                return self.add_libvirt(**kwargs.pop(bmc_type), **kwargs)
+            elif bmc_type == 'ironic':
+                return self.add_ironic(**kwargs.pop(bmc_type), **kwargs)
+        except Exception as ex:
+            msg = f'Error creating vBMC {kwargs["name"]}'
+            LOG.exception(msg)
+            return 1, msg
 
     def add_libvirt(self, name, domain_name, username, password, host_ip,
                     port, uri, sasl_username, sasl_password, **kwargs):
-        if self._bmc_exists(name):
-            msg = f'Error creating vBMC {name}: config dir already exists'
-            LOG.error(msg)
-            return 1, msg
-
         sasl_creds = (sasl_username, sasl_password)
         if any(sasl_creds) and not all(sasl_creds):
             msg = ("A password and username are required to use "
@@ -145,48 +150,43 @@ class VirtualBMCManager(object):
 
         try:
             bmc_config = cfg.BMCConfig('libvirt')
-            bmc_config.create(bmc_type='libvirt',
-                              name=name,
-                              host_ip=host_ip,
-                              port=port,
-                              username=username,
-                              password=password,
-                              domain_name=domain_name,
-                              uri=uri,
-                              sasl_username=sasl_username,
-                              sasl_password=sasl_password)
+            bmc_config.new(bmc_type='libvirt',
+                           name=name,
+                           host_ip=host_ip,
+                           port=port,
+                           username=username,
+                           password=password,
+                           domain_name=domain_name,
+                           uri=uri,
+                           sasl_username=sasl_username,
+                           sasl_password=sasl_password)
             bmc_config.write()
         except Exception as ex:
             self.delete(name)
             msg = f'Error creating vBMC {name}: {str(ex)}'
-            LOG.error(msg)
+            LOG.exception(msg)
             return 1, msg
 
         return 0, ''
 
-    def add_ironic(self, name, domain_name, username, password,
-                    host_ip, port, node_uuid, cloud, region, **kwargs):
-        if self._bmc_exists(name):
-            msg = f'Error creating vBMC {name}: config dir already exists'
-            LOG.error(msg)
-            return 1, msg
-
+    def add_ironic(self, name, username, password, host_ip, port,
+                   node_uuid, cloud, region, **kwargs):
         try:
             bmc_config = cfg.BMCConfig('ironic')
-            bmc_config.create(bmc_type='ironic',
-                              name=name,
-                              host_ip=host_ip,
-                              port=port,
-                              username=username,
-                              password=password,
-                              node_uuid=node_uuid,
-                              cloud=cloud,
-                              region=region)
+            bmc_config.new(bmc_type='ironic',
+                           name=name,
+                           host_ip=host_ip,
+                           port=port,
+                           username=username,
+                           password=password,
+                           node_uuid=node_uuid,
+                           cloud=cloud,
+                           region=region)
             bmc_config.write()
         except Exception as ex:
             self.delete(name)
             msg = f'Error creating vBMC {name}: {str(ex)}'
-            LOG.error(msg)
+            LOG.exception(msg)
             return 1, msg
 
         return 0, ''
@@ -208,7 +208,8 @@ class VirtualBMCManager(object):
         if not self._bmc_exists(name):
             raise exception.NotFound(name=name)
 
-        bmc_config = cfg.BMCConfig(name, self.config_dir)
+        bmc_config = cfg.BMCConfig()
+        bmc_config.load(name)
 
         if name in self._running_instances:
             self.sync_vbmc_states()
@@ -218,7 +219,7 @@ class VirtualBMCManager(object):
                 return 0, ''
 
         try:
-            if not bmc_config.CONF.get('enabled', None):
+            if not bmc_config.get('enabled', None):
                 bmc_config.set('enabled', True)
                 bmc_config.write()
         except Exception as ex:
@@ -234,10 +235,11 @@ class VirtualBMCManager(object):
         if not self._bmc_exists(name):
             raise exception.NotFound(name=name)
 
-        bmc_config = cfg.BMCConfig().load(name)
+        bmc_config = cfg.BMCConfig()
+        bmc_config.load(name)
 
         try:
-            if bmc_config.CONF.get('enabled', None):
+            if bmc_config.get('enabled', None):
                 bmc_config.set('enabled', False)
                 bmc_config.write()
         except Exception as ex:
@@ -263,7 +265,8 @@ class VirtualBMCManager(object):
         return rc, tables
 
     def _get_as_dict(self, name):
-        bmc_config = cfg.BMCConfig().load(name)
+        bmc_config = cfg.BMCConfig()
+        bmc_config.load(name)
         show_options = bmc_config.as_dict()
 
         instance = self._running_instances.get(name)

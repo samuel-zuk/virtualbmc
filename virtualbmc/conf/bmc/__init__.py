@@ -10,6 +10,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+# import collections.abc as abc
+import functools
 import pathlib
 
 from oslo_config import cfg
@@ -27,47 +29,79 @@ BMC_TYPES = ('libvirt', 'ironic')
 INTERNAL_OPTS = ('config_dir', 'config_file', 'config_source')
 
 
-class BMCConfig:
+# class BMCConfig2(cfg.ConfigOpts, abc.MutableMapping):
+#     def __setitem__(self, name, value):
+#         try:
+#             if name not in self.keys():
+#                 self.register_opt(cfg.StrOpt(name, default=value))
+#             else:
+#                 self.set_override(name, value)
+#         except Exception as ex:
+#             msg = (f'BMCConfig error when setting option {name}={value}\n'
+#                    f'Error: {ex}')
+#             LOG.exception(msg)
+#             raise ValueError(msg)
+#     def __delitem__(self, name):
+#         try:
+#             if name in self._opts.keys():
+#                 del self._opts[name]
+#             elif name in self._groups.keys():
+#                 del self._groups[name]
+#             else:
+#                 raise ValueError('Option not found')
+#         except Exception as ex:
+#             msg = (f'BMCConfig error when deleting option {name}\n'
+#                    f'Error: {ex}')
+#             LOG.exception(msg)
+#             raise ValueError(msg)
+#     def parse_args(self, args=()):
+#         def OptionalTuple(value):
+#             return (str(value),) if value else None
+# 
+#         self(
+#             args=args,
+#             project=self.name,
+#             prog='vbmc',
+#             default_config_files=OptionalTuple(self.conf_path),
+#             default_config_dirs=OptionalTuple(selfconf_dir),
+#             validate_default_values=True,
+#             use_env=False,
+#         )
+#
+#         return self._namespace
+
+class BMCConfig(cfg.ConfigOpts):
     def __init__(self, bmc_type=None):
+        super().__init__()
         self.name = None
         self.conf_dir = None
         self.conf_path = None
-
-        self.CONF = cfg.ConfigOpts()
-
-        conf_default.register_opts(self.CONF)
-
         self.bmc_type = bmc_type
-        self._register_bmc_type()
 
-    def _parse(self, cli_args=()):
-        def default_tuple(value):
-            return (str(value),) if value else None
+        conf_default.register_opts(self)
 
-        self.CONF(
-            args=cli_args,
-            project=self.name,
-            prog='vbmc',
-            default_config_files=default_tuple(self.conf_path),
-            default_config_dirs=default_tuple(self.conf_dir),
-            validate_default_values=True,
-            use_env=False,
-        )
+    def _register_bmc_type(self, bmc_type=None):
+        if bmc_type is None:
+            bmc_type = self.bmc_type
 
-    def _register_bmc_type(self):
-        if self.bmc_type == 'libvirt':
-            conf_libvirt.register_opts(self.CONF)
+        if bmc_type == 'libvirt':
+            conf_libvirt.register_opts(self)
+        elif bmc_type == 'ironic':
+            conf_ironic.register_opts(self)
 
     def _set_from_kwargs(self, options, kwargs, group=None):
         """Sets options that were specified as kwargs for a given group."""
         for opt in options:
             # opt.dest is opt.name but with '-' replaced with '_'
             if opt.dest in kwargs.keys():
-                self.set(opt.dest, kwargs[opt.dest], group)
+                self.set_override(opt.dest, kwargs[opt.dest], group)
                 kwargs.pop(opt.dest)
         return kwargs
 
     def _prepare_config_files(self):
+        if self.conf_dir and self.conf_path:
+            return
+
         base_dir = APP_CONF['config_dir'][0]
 
         # the / operator is like os.path.join() but for pathlib
@@ -87,55 +121,38 @@ class BMCConfig:
 
         self.conf_path = conf_path
 
-    def get_parser(self):
-        self._parse()
-        return self.CONF._oparser
-
-    def parse_cli_opts(self, opts):
-        self._parse(cli_opts=opts)
-
-    def as_dict(self):
-        d = dict(self.CONF, **self.CONF[self.bmc_type])
-        d.pop(self.bmc_type, None)
-        for o in INTERNAL_OPTS:
-            d.pop(o, None)
-        return d
-
-    def create(self, name, bmc_type, **kwargs):
+    def new(self, name, bmc_type, **kwargs):
         if bmc_type not in BMC_TYPES:
             raise ValueError(f'Invalid vBMC type {bmc_type}')
 
-        self.bmc_type = bmc_type
         self.name = name
-
-        self._prepare_config_files()
+        self.bmc_type = bmc_type
 
         kwargs = self._set_from_kwargs(conf_default.default_opts, kwargs)
 
+        self._register_bmc_type()
         if self.bmc_type == 'libvirt':
-            conf_libvirt.register_opts(self.CONF)
             self._set_from_kwargs(conf_libvirt.libvirt_opts, kwargs, group='libvirt')
         elif self.bmc_type == 'ironic':
-            conf_ironic.register_opts(self.CONF)
             self._set_from_kwargs(conf_ironic.ironic_opts, kwargs, group='ironic')
 
     def load(self, name):
+        def parse():
+            self(args=(name, 'ironic'),
+                 project=self.name,
+                 prog='vbmc',
+                 default_config_files=(self.conf_path,),
+                 default_config_dirs=(self.conf_dir,),
+                 validate_default_values=True,
+                 use_env=False,)
+
         self.name = name
         self._prepare_config_files()
+        self._namespace = cfg._Namespace(self)
+        cfg.ConfigParser._parse_file(self.conf_path, self._namespace)
 
-        self._parse()
-
-        self.bmc_type = self.CONF['bmc_type']
-        
-        if self.bmc_type == 'libvirt':
-            conf_libvirt.register_opts(self.CONF)
-        elif self.bmc_type == 'ironic':
-            conf_ironic.register_opts(self.CONF)
-
-        self._parse()
-
-    def set(self, opt_name, value, group=None):
-        self.CONF.set_override(opt_name, value, group)
+        self._register_bmc_type()
+        parse()
 
     def write(self, output_file=None):
         # NOTE: this function is hacked together from pieces of oslo.config's
@@ -147,6 +164,8 @@ class BMCConfig:
         # are only really documented in the source code itself, which can be
         # found at
         # https://opendev.org/openstack/oslo.config/src/branch/master/oslo_config/generator.py
+        self._prepare_config_files()
+
         class FormatterConfig(dict):
             def __getattr__(self, attr):
                 return self[attr]
@@ -165,12 +184,12 @@ class BMCConfig:
                 ('format', 'ini'),
             ))
             fmt = gen._OptFormatter(fmt_conf, conf_file)
-            groups = dict({'DEFAULT': self.CONF},
-                          **dict(sorted(self.CONF._groups.items())))
+            groups = {'DEFAULT': self,
+                      self.bmc_type: self._groups.get(self.bmc_type)}
 
             for (group_name, group_obj) in groups.items():
                 fmt.format_group(group_name)
-                for (opt_name, opt) in sorted(group_obj._opts.items()):
+                for (opt_name, opt) in group_obj._opts.items():
                     if opt_name in INTERNAL_OPTS:
                         continue
 
@@ -178,10 +197,11 @@ class BMCConfig:
                     # default value of whatever Opt object is passed to it,
                     # so we need to set that equal to the actual opt value.
                     opt = opt['opt']
-                    opt.default = self.CONF._get(
+                    opt.default = self._get(
                         opt_name,
                         group=(None if group_name == 'DEFAULT' else group_obj)
                     )
+                    print(f'optn {opt_name}: def {opt.default}')
                     try:
                         fmt.write('\n')
                         fmt.format(opt, group_name)
@@ -191,3 +211,49 @@ class BMCConfig:
                             '# %s\n' % (opt_name, str(ex))
                         )
                 fmt.write('\n\n')
+
+    def init_parser(self, prog, version, usage=None, description=None,
+                    epilog=None):
+        prog, default_config_files, default_config_dirs = self._pre_setup(
+            project='vbmc',
+            prog=prog,
+            version=version,
+            usage=usage,
+            description=description,
+            epilog=epilog,
+            default_config_files=(),
+            default_config_dirs=(),
+        )
+        self._setup(
+            project='vbmc',
+            prog=prog,
+            version=version,
+            usage=usage,
+            default_config_files=default_config_files,
+            default_config_dirs=default_config_dirs,
+            use_env=False
+        )
+        for opt, group in self._all_cli_opts():
+            opt._add_to_cli(self._oparser, group)
+
+    def get_parser(self):
+        if self._oparser == None:
+            raise RuntimeError('Tried to get uninitialized parser')
+        return self._oparser
+
+    def as_dict(self):
+        d = dict(self)
+        bmc_type = self['bmc_type']
+        print(f'bmct:{bmc_type}')
+
+        for g in self._groups.keys():
+            d.pop(g, None)
+
+        if bmc_type is not None:
+            print(f'dbg:{dict(self[bmc_type])}')
+            d[bmc_type] = dict(self[bmc_type])
+
+        for o in INTERNAL_OPTS:
+            d.pop(o, None)
+
+        return d

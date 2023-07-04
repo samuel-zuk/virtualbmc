@@ -122,34 +122,37 @@ class AddCommand(Command):
 
     def get_parser(self, prog_name):
         self.config = bmc_conf.BMCConfig()
-        bmc_conf.libvirt.register_opts(self.config.CONF)
-        bmc_conf.ironic.register_opts(self.config.CONF)
+        
+        self.config.init_parser(
+            prog='vbmc add',
+            version=virtualbmc.__version__,
+            description='Create a new BMC for a virtual machine instance'
+        )
+                                
+        for typ in bmc_conf.BMC_TYPES:
+            self.config._register_bmc_type(typ)
 
-        def parse_args(args=None, config=None):
-            config.CONF(
+        def parse_args(args=(), config=None):
+            config(
                 args=args,
                 prog='vbmc add',
                 version=virtualbmc.__version__,
                 description='Create a new BMC for a virtual machine instance',
                 use_env=False,
             ) 
-            return config
+            return config.as_dict()
 
         parser = self.config.get_parser()
         parser.parse_args = partial(parse_args, config=self.config)
 
         return parser
 
-    def take_action(self, conf):
+    def take_action(self, parsed_args):
         def Object(**kwargs):
             return type('Object', (), kwargs)
 
-        d = dict(conf.CONF, **conf.CONF['libvirt'], **conf.CONF['ironic'])
-        d.pop('libvirt', None)
-        d.pop('ironic', None)
-        for o in bmc_conf.INTERNAL_OPTS:
-            d.pop(o, None)
-        args = Object(**d)
+        args = Object(**parsed_args)
+        print(args.__dict__)
 
         self.app.zmq.communicate(
             'add', args, no_daemon=self.app.options.no_daemon

@@ -18,15 +18,15 @@ from virtualbmc.conf import CONF
 default_opts = [
     cfg.StrOpt(
         'name',
-        # positional=True,
+        positional=True,
         default=None,
         help='The name of this vBMC.'
     ),
     cfg.StrOpt(
         'bmc-type',
+        positional=True,
         default=None,
         choices=('libvirt', 'ironic'),
-        # positional=True,
         help='The service the vBMC will communicate with',
     ),
     cfg.BoolOpt(
