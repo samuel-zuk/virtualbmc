@@ -35,9 +35,9 @@ class IronicVbmc(base.VbmcBase):
     bmc_cmd = base.VbmcBase.bmc_cmd
     vbmc_type = 'ironic node'
 
-    def __init__(self, name, username, password, host_address, port,
+    def __init__(self, name, username, password, host_ip, port,
                  node_uuid, cloud, region, **kwargs):
-        super().__init__(host_address, port, username, password, name)
+        super().__init__(name, username, password, host_ip, port)
         self.node_uuid = node_uuid
         self._conn_args = {'cloud': cloud, 'region': region}
 

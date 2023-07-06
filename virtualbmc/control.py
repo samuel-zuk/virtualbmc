@@ -158,8 +158,8 @@ def command_dispatcher(vbmc_manager, data_in):
     elif command == 'list':
         rc, tables = vbmc_manager.list()
 
-        header = ('Domain name', 'Status', 'Address', 'Port')
-        keys = ('domain_name', 'status', 'address', 'port')
+        header = ('Name', 'Type', 'Status', 'Address', 'Port')
+        keys = ('name', 'bmc_type', 'status', 'host_ip', 'port')
         return {
             'rc': rc,
             'header': header,

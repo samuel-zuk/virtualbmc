@@ -122,13 +122,13 @@ class AddCommand(Command):
 
     def get_parser(self, prog_name):
         self.config = bmc_conf.BMCConfig()
-        
+
         self.config.init_parser(
             prog='vbmc add',
             version=virtualbmc.__version__,
             description='Create a new BMC for a virtual machine instance'
         )
-                                
+
         for typ in bmc_conf.BMC_TYPES:
             self.config._register_bmc_type(typ)
 
@@ -139,7 +139,7 @@ class AddCommand(Command):
                 version=virtualbmc.__version__,
                 description='Create a new BMC for a virtual machine instance',
                 use_env=False,
-            ) 
+            )
             return config.as_dict()
 
         parser = self.config.get_parser()
@@ -152,7 +152,6 @@ class AddCommand(Command):
             return type('Object', (), kwargs)
 
         args = Object(**parsed_args)
-        print(args.__dict__)
 
         self.app.zmq.communicate(
             'add', args, no_daemon=self.app.options.no_daemon

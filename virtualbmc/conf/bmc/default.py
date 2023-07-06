@@ -52,10 +52,11 @@ default_opts = [
     cfg.StrOpt(
         'password',
         default='password',
-        secret=CONF['show_passwords'],
+        secret=(not CONF['show_passwords']),
         help='The password to expect from an IPMI client',
     ),
 ]
+
 
 def register_opts(conf):
     conf.register_cli_opts(default_opts)

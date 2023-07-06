@@ -22,7 +22,8 @@ from virtualbmc.conf import CONF
 from virtualbmc import exception
 from virtualbmc import log
 from virtualbmc import utils
-from virtualbmc import vbmc
+from virtualbmc.vbmc.ironic import IronicVbmc
+from virtualbmc.vbmc.libvirt import LibvirtVbmc
 
 LOG = log.get_logger()
 
@@ -35,9 +36,13 @@ ERROR = 'error'
 class VirtualBMCManager(object):
     def __init__(self):
         self.config_dir = CONF['config_dir']
-
         if type(self.config_dir) is list:
             self.config_dir = self.config_dir[0]
+
+        self.config_dir = os.path.abspath(self.config_dir)
+        if not os.path.exists(self.config_dir):
+            os.mkdir(self.config_dir)
+
         self._running_instances = {}
 
     def _bmc_exists(self, name):
@@ -55,11 +60,13 @@ class VirtualBMCManager(object):
 
             try:
                 if bmc_config['bmc_type'] == 'libvirt':
-                    bmc = vbmc.libvirt.LibvirtVbmc(**bmc_config)
+                    bmc = LibvirtVbmc(**bmc_config.as_dict(flatten=True))
                 elif bmc_config['bmc_type'] == 'ironic':
-                    bmc = vbmc.ironic.IronicVbmc(**bmc_config)
+                    bmc = IronicVbmc(**bmc_config.as_dict(flatten=True))
                 else:
-                    bmc = vbmc.base.VbmcBase(**bmc_config)
+                    raise ValueError(
+                        f'Unknown bmc type {bmc_config["bmc_type"]}'
+                    )
                 bmc.listen(timeout=CONF['ipmi']['session_timeout'])
             except Exception as e:
                 LOG.exception(
@@ -68,7 +75,7 @@ class VirtualBMCManager(object):
                                       'name': bmc_config['name'],
                                       'err': str(e)}
                 )
-                bmc_config.log_opt_values(LOG, logging.EXCEPTION)
+                bmc_config.log_opt_values(LOG, logging.ERROR)
 
         for name in os.listdir(self.config_dir):
             if not self._bmc_exists(name):
@@ -111,13 +118,14 @@ class VirtualBMCManager(object):
             LOG.error(msg)
             return 1, msg
 
-        if 'name' not in kwargs or kwargs['name'] is None:
-            msg = 'vbmc add error: name must be specified'
+        name = kwargs.get('name', None)
+        if name is None:
+            msg = 'Error adding vBMC: name must be specified'
             LOG.error(msg)
             return 1, msg
 
-        if self._bmc_exists(kwargs['name']):
-            msg = f'Error creating vBMC {name}: config dir already exists'
+        if self._bmc_exists(name):
+            msg = f'Error adding vBMC {name}: config dir already exists'
             LOG.error(msg)
             return 1, msg
 
@@ -129,7 +137,7 @@ class VirtualBMCManager(object):
             elif bmc_type == 'ironic':
                 return self.add_ironic(**kwargs.pop(bmc_type), **kwargs)
         except Exception as ex:
-            msg = f'Error creating vBMC {kwargs["name"]}'
+            msg = f'Error creating vBMC {kwargs["name"]}: {ex}'
             LOG.exception(msg)
             return 1, msg
 
@@ -171,6 +179,8 @@ class VirtualBMCManager(object):
 
     def add_ironic(self, name, username, password, host_ip, port,
                    node_uuid, cloud, region, **kwargs):
+        if node_uuid is None:
+            node_uuid = name
         try:
             bmc_config = cfg.BMCConfig('ironic')
             bmc_config.new(bmc_type='ironic',
@@ -192,15 +202,20 @@ class VirtualBMCManager(object):
         return 0, ''
 
     def delete(self, name):
-        if not self._bmc_exists(name):
-            raise exception.NotFound(name=name)
-
         try:
-            self.stop(name)
-        except exception.VirtualBMCError:
-            pass
+            if not self._bmc_exists(name):
+                raise exception.NotFound(name=name)
 
-        shutil.rmtree(os.path.join(self.config_dir, name))
+            try:
+                self.stop(name)
+            except exception.VirtualBMCError:
+                pass
+
+            shutil.rmtree(os.path.join(self.config_dir, name))
+        except Exception as ex:
+            msg = f'Error deleting vBMC {name}: {str(ex)}'
+            LOG.exception(msg)
+            return 1, msg
 
         return 0, ''
 
@@ -220,7 +235,7 @@ class VirtualBMCManager(object):
 
         try:
             if not bmc_config.get('enabled', None):
-                bmc_config.set('enabled', True)
+                bmc_config.set_override('enabled', True)
                 bmc_config.write()
         except Exception as ex:
             msg = ('Error running %(typ)s vBMC %(name)s: %(err)s\n' %

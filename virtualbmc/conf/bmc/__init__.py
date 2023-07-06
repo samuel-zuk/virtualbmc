@@ -121,38 +121,42 @@ class BMCConfig(cfg.ConfigOpts):
 
         self.conf_path = conf_path
 
-    def new(self, name, bmc_type, **kwargs):
+    def new(self, bmc_type, name, **kwargs):
         if bmc_type not in BMC_TYPES:
             raise ValueError(f'Invalid vBMC type {bmc_type}')
 
         self.name = name
         self.bmc_type = bmc_type
 
+        self.set_override('name', name)
+        self.set_override('bmc_type', bmc_type)
         kwargs = self._set_from_kwargs(conf_default.default_opts, kwargs)
 
         self._register_bmc_type()
         if self.bmc_type == 'libvirt':
-            self._set_from_kwargs(conf_libvirt.libvirt_opts, kwargs, group='libvirt')
+            self._set_from_kwargs(conf_libvirt.libvirt_opts,
+                                  kwargs, group='libvirt')
         elif self.bmc_type == 'ironic':
-            self._set_from_kwargs(conf_ironic.ironic_opts, kwargs, group='ironic')
+            self._set_from_kwargs(conf_ironic.ironic_opts,
+                                  kwargs, group='ironic')
 
     def load(self, name):
-        def parse():
-            self(args=(name, 'ironic'),
-                 project=self.name,
-                 prog='vbmc',
-                 default_config_files=(self.conf_path,),
-                 default_config_dirs=(self.conf_dir,),
-                 validate_default_values=True,
-                 use_env=False,)
-
         self.name = name
+
         self._prepare_config_files()
         self._namespace = cfg._Namespace(self)
         cfg.ConfigParser._parse_file(self.conf_path, self._namespace)
 
-        self._register_bmc_type()
-        parse()
+        self.bmc_type = self['bmc_type']
+
+        self._register_bmc_type(self.bmc_type)
+        self(args=(name, 'ironic'),
+             project=self.name,
+             prog='vbmc',
+             default_config_files=(self.conf_path,),
+             default_config_dirs=(self.conf_dir,),
+             validate_default_values=True,
+             use_env=False,)
 
     def write(self, output_file=None):
         # NOTE: this function is hacked together from pieces of oslo.config's
@@ -201,7 +205,6 @@ class BMCConfig(cfg.ConfigOpts):
                         opt_name,
                         group=(None if group_name == 'DEFAULT' else group_obj)
                     )
-                    print(f'optn {opt_name}: def {opt.default}')
                     try:
                         fmt.write('\n')
                         fmt.format(opt, group_name)
@@ -237,21 +240,22 @@ class BMCConfig(cfg.ConfigOpts):
             opt._add_to_cli(self._oparser, group)
 
     def get_parser(self):
-        if self._oparser == None:
+        if self._oparser is None:
             raise RuntimeError('Tried to get uninitialized parser')
         return self._oparser
 
-    def as_dict(self):
+    def as_dict(self, flatten=False):
         d = dict(self)
         bmc_type = self['bmc_type']
-        print(f'bmct:{bmc_type}')
 
         for g in self._groups.keys():
             d.pop(g, None)
 
         if bmc_type is not None:
-            print(f'dbg:{dict(self[bmc_type])}')
-            d[bmc_type] = dict(self[bmc_type])
+            if flatten:
+                d = dict(d, **self[bmc_type])
+            else:
+                d[bmc_type] = dict(self[bmc_type])
 
         for o in INTERNAL_OPTS:
             d.pop(o, None)

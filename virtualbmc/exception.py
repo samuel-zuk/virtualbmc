@@ -31,7 +31,7 @@ class LibvirtError:
 
 
 class NotFound(VirtualBMCError):
-    message = 'Virtual machine with name %(name) not found'
+    message = 'Virtual machine with name %(name)s not found'
 
 
 class DomainAlreadyExists(VirtualBMCError, LibvirtError):

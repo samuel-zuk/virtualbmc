@@ -38,10 +38,10 @@ class LibvirtVbmc(base.VbmcBase):
     bmc_cmd = base.VbmcBase.bmc_cmd
     vbmc_type = 'libvirt domain'
 
-    def __init__(self, name, username, password, host_address, port,
+    def __init__(self, name, username, password, host_ip, port,
                  libvirt_uri, libvirt_sasl_username=None,
                  libvirt_sasl_password=None, **kwargs):
-        super().__init__(host_address, port, username, password, name)
+        super().__init__(name, username, password, host_ip, port)
         self._conn_args = {'uri': libvirt_uri,
                            'sasl_username': libvirt_sasl_username,
                            'sasl_password': libvirt_sasl_password}

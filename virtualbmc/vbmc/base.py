@@ -25,10 +25,10 @@ class VbmcBase(bmc.Bmc):
 
     vbmc_type = 'vbmc_base'
 
-    def __init__(self, name, username, password, host_address, port, **kwargs):
+    def __init__(self, name, username, password, host_ip, port, **kwargs):
         super().__init__(authdata={username: password},
                          port=port,
-                         addresss=host_address)
+                         address=host_ip)
         self.name = name
 
     @staticmethod
