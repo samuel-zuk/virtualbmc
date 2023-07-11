@@ -57,7 +57,7 @@ INTERNAL_OPTS = ('config_dir', 'config_file', 'config_source')
 #     def parse_args(self, args=()):
 #         def OptionalTuple(value):
 #             return (str(value),) if value else None
-# 
+#
 #         self(
 #             args=args,
 #             project=self.name,
@@ -150,7 +150,7 @@ class BMCConfig(cfg.ConfigOpts):
         self.bmc_type = self['bmc_type']
 
         self._register_bmc_type(self.bmc_type)
-        self(args=(name, 'ironic'),
+        self(args=(name, self.bmc_type),
              project=self.name,
              prog='vbmc',
              default_config_files=(self.conf_path,),

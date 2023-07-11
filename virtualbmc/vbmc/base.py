@@ -39,7 +39,7 @@ class VbmcBase(bmc.Bmc):
             def wrapper(self, *args, **kwargs):
                 argument_info = ''
                 debug_str = (f'Calling {func.__name__} for {self.vbmc_type} '
-                             '{self.name}')
+                             f'{self.name}')
                 if args or kwargs:
                     if args:
                         args_str = ', '.join(args)
@@ -57,7 +57,7 @@ class VbmcBase(bmc.Bmc):
                     return func(self, *args, **kwargs)
                 except Exception as e:
                     error_str = (f'{func.__name__} failed for {self.vbmc_type}'
-                                 ' {self.name}')
+                                 f' {self.name}')
                     if args or kwargs:
                         error_str += argument_info
                     error_str += f'\nError: {str(e)}'

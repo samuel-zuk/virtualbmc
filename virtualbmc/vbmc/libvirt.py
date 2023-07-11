@@ -39,12 +39,13 @@ class LibvirtVbmc(base.VbmcBase):
     vbmc_type = 'libvirt domain'
 
     def __init__(self, name, username, password, host_ip, port,
-                 libvirt_uri, libvirt_sasl_username=None,
-                 libvirt_sasl_password=None, **kwargs):
+                 uri, domain_name, sasl_username=None, sasl_password=None,
+                 **kwargs):
         super().__init__(name, username, password, host_ip, port)
-        self._conn_args = {'uri': libvirt_uri,
-                           'sasl_username': libvirt_sasl_username,
-                           'sasl_password': libvirt_sasl_password}
+        self._conn_args = {'uri': uri,
+                           'sasl_username': sasl_username,
+                           'sasl_password': sasl_password}
+        self.domain_name = domain_name
 
     # Copied from nova/virt/libvirt/guest.py
     def get_xml_desc(self, domain, dump_sensitive=False):
@@ -64,7 +65,7 @@ class LibvirtVbmc(base.VbmcBase):
     @bmc_cmd
     def get_boot_device(self):
         with utils.libvirt_open(readonly=True, **self._conn_args) as conn:
-            domain = utils.get_libvirt_domain(conn, self.name)
+            domain = utils.get_libvirt_domain(conn, self.domain_name)
             boot_element = ET.fromstring(domain.XMLDesc()).find('.//os/boot')
             boot_dev = None
             if boot_element is not None:
@@ -79,7 +80,7 @@ class LibvirtVbmc(base.VbmcBase):
             return constants.IPMI_INVALID_DATA
 
         with utils.libvirt_open(**self._conn_args) as conn:
-            domain = utils.get_libvirt_domain(conn, self.name)
+            domain = utils.get_libvirt_domain(conn, self.domain_name)
             tree = ET.fromstring(
                 self.get_xml_desc(domain, dump_sensitive=True))
 
@@ -101,7 +102,7 @@ class LibvirtVbmc(base.VbmcBase):
     @bmc_cmd(fail_ok=False)
     def get_power_state(self):
         with utils.libvirt_open(readonly=True, **self._conn_args) as conn:
-            domain = utils.get_libvirt_domain(conn, self.name)
+            domain = utils.get_libvirt_domain(conn, self.domain_name)
             if domain.isActive():
                 return constants.POWERON
             else:
@@ -110,34 +111,34 @@ class LibvirtVbmc(base.VbmcBase):
     @bmc_cmd
     def pulse_diag(self):
         with utils.libvirt_open(**self._conn_args) as conn:
-            domain = utils.get_libvirt_domain(conn, self.name)
+            domain = utils.get_libvirt_domain(conn, self.domain_name)
             if domain.isActive():
                 domain.injectNMI()
 
     @bmc_cmd
     def power_off(self):
         with utils.libvirt_open(**self._conn_args) as conn:
-            domain = utils.get_libvirt_domain(conn, self.name)
+            domain = utils.get_libvirt_domain(conn, self.domain_name)
             if domain.isActive():
                 domain.destroy()
 
     @bmc_cmd
     def power_on(self):
         with utils.libvirt_open(**self._conn_args) as conn:
-            domain = utils.get_libvirt_domain(conn, self.name)
+            domain = utils.get_libvirt_domain(conn, self.domain_name)
             if not domain.isActive():
                 domain.create()
 
     @bmc_cmd
     def power_shutdown(self):
         with utils.libvirt_open(**self._conn_args) as conn:
-            domain = utils.get_libvirt_domain(conn, self.name)
+            domain = utils.get_libvirt_domain(conn, self.domain_name)
             if domain.isActive():
                 domain.shutdown()
 
     @bmc_cmd
     def power_reset(self):
         with utils.libvirt_open(**self._conn_args) as conn:
-            domain = utils.get_libvirt_domain(conn, self.name)
+            domain = utils.get_libvirt_domain(conn, self.domain_name)
             if domain.isActive():
                 domain.reset()

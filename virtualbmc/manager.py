@@ -141,8 +141,8 @@ class VirtualBMCManager(object):
             LOG.exception(msg)
             return 1, msg
 
-    def add_libvirt(self, name, domain_name, username, password, host_ip,
-                    port, uri, sasl_username, sasl_password, **kwargs):
+    def add_libvirt(self, name, username, password, host_ip, port,
+                    uri, domain_name, sasl_username, sasl_password, **kwargs):
         sasl_creds = (sasl_username, sasl_password)
         if any(sasl_creds) and not all(sasl_creds):
             msg = ("A password and username are required to use "
@@ -160,12 +160,12 @@ class VirtualBMCManager(object):
             bmc_config = cfg.BMCConfig('libvirt')
             bmc_config.new(bmc_type='libvirt',
                            name=name,
-                           host_ip=host_ip,
-                           port=port,
                            username=username,
                            password=password,
-                           domain_name=domain_name,
+                           host_ip=host_ip,
+                           port=port,
                            uri=uri,
+                           domain_name=domain_name,
                            sasl_username=sasl_username,
                            sasl_password=sasl_password)
             bmc_config.write()
@@ -255,7 +255,7 @@ class VirtualBMCManager(object):
 
         try:
             if bmc_config.get('enabled', None):
-                bmc_config.set('enabled', False)
+                bmc_config.set_override('enabled', False)
                 bmc_config.write()
         except Exception as ex:
             msg = ('Error stopping %(typ)s vBMC %(name)s: %(err)s\n' %
