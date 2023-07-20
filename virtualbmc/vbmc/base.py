@@ -17,6 +17,7 @@ import pyghmi.ipmi.bmc as bmc
 from virtualbmc import exception
 from virtualbmc import log
 from virtualbmc.vbmc import constants
+from virtualbmc.utils import mk_argument_info
 
 LOG = log.get_logger()
 
@@ -37,36 +38,24 @@ class VbmcBase(bmc.Bmc):
         def decorator(func):
             @wraps(func)
             def wrapper(self, *args, **kwargs):
-                argument_info = ''
-                debug_str = (f'Calling {func.__name__} for {self.vbmc_type} '
-                             f'{self.name}')
-                if args or kwargs:
-                    if args:
-                        args_str = ', '.join(args)
-                        argument_info += f' with args "{args_str}"'
-                    if kwargs:
-                        kwargs_str = ', '.join(map(lambda k, v: f'{k}={v}',
-                                                   kwargs.items()))
-                        argument_info += ' and ' if args else ' with '
-                        argument_info += f'kwargs {kwargs_str}'
-
-                    debug_str += argument_info
-                LOG.debug(debug_str)
+                raise Exception(f'{args}\n{kwargs}')
+                argument_info = mk_argument_info(args, kwargs)
+                LOG.debug(f'Calling {func.__name__} for {self.vbmc_type} '
+                          f'{self.name}{argument_info}')
 
                 try:
                     return func(self, *args, **kwargs)
-                except Exception as e:
+                except Exception as ex:
                     error_str = (f'{func.__name__} failed for {self.vbmc_type}'
-                                 f' {self.name}')
-                    if args or kwargs:
-                        error_str += argument_info
-                    error_str += f'\nError: {str(e)}'
-                    LOG.error(error_str)
+                                 f' {self.name}{argument_info}')
+                    LOG.exception(error_str)
 
                     if fail_ok:
                         return constants.IPMI_COMMAND_NODE_BUSY
                     else:
+                        error_str += str(ex)
                         raise exception.VirtualBMCError(message=error_str)
+
             return wrapper
         # (szuk) this makes it so the decorator syntax "works" with arguments.
         return decorator if len(args) == 0 else decorator(args[0])

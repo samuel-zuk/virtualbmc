@@ -21,6 +21,7 @@ from virtualbmc.conf import CONF as APP_CONF
 from virtualbmc.conf.bmc import default as conf_default
 from virtualbmc.conf.bmc import ironic as conf_ironic
 from virtualbmc.conf.bmc import libvirt as conf_libvirt
+from virtualbmc import exception
 from virtualbmc import log
 
 LOG = log.get_logger()
@@ -54,21 +55,6 @@ INTERNAL_OPTS = ('config_dir', 'config_file', 'config_source')
 #                    f'Error: {ex}')
 #             LOG.exception(msg)
 #             raise ValueError(msg)
-#     def parse_args(self, args=()):
-#         def OptionalTuple(value):
-#             return (str(value),) if value else None
-#
-#         self(
-#             args=args,
-#             project=self.name,
-#             prog='vbmc',
-#             default_config_files=OptionalTuple(self.conf_path),
-#             default_config_dirs=OptionalTuple(selfconf_dir),
-#             validate_default_values=True,
-#             use_env=False,
-#         )
-#
-#         return self._namespace
 
 class BMCConfig(cfg.ConfigOpts):
     def __init__(self, bmc_type=None):
@@ -98,7 +84,7 @@ class BMCConfig(cfg.ConfigOpts):
                 kwargs.pop(opt.dest)
         return kwargs
 
-    def _prepare_config_files(self):
+    def _prepare_config_files(self, create_files=True):
         if self.conf_dir and self.conf_path:
             return
 
@@ -107,7 +93,10 @@ class BMCConfig(cfg.ConfigOpts):
         # the / operator is like os.path.join() but for pathlib
         conf_dir = pathlib.Path(base_dir).expanduser().absolute() / self.name
         if not conf_dir.exists():
-            conf_dir.mkdir(parents=True)
+            if create_files:
+                conf_dir.mkdir(parents=True)
+            else:
+                raise FileNotFoundError(str(conf_dir))
         elif not conf_dir.is_dir():
             raise ValueError(f'{str(conf_dir)} is not a directory')
 
@@ -115,7 +104,10 @@ class BMCConfig(cfg.ConfigOpts):
 
         conf_path = conf_dir / 'vbmc.conf'
         if not conf_path.exists():
-            conf_path.touch()
+            if create_files:
+                conf_path.touch()
+            else:
+                raise FileNotFoundError(str(conf_path))
         elif not conf_path.is_file():
             raise ValueError(f'{str(conf_path)} is not a file')
 
@@ -143,14 +135,18 @@ class BMCConfig(cfg.ConfigOpts):
     def load(self, name):
         self.name = name
 
-        self._prepare_config_files()
+        try:
+            self._prepare_config_files(create_files=False)
+        except Exception:
+            raise exception.NotFound(name=name)
+
         self._namespace = cfg._Namespace(self)
         cfg.ConfigParser._parse_file(self.conf_path, self._namespace)
 
         self.bmc_type = self['bmc_type']
 
         self._register_bmc_type(self.bmc_type)
-        self(args=(name, self.bmc_type),
+        self(args=(name,),
              project=self.name,
              prog='vbmc',
              default_config_files=(self.conf_path,),
@@ -245,19 +241,21 @@ class BMCConfig(cfg.ConfigOpts):
         return self._oparser
 
     def as_dict(self, flatten=False):
-        d = dict(self)
+        # ! creates a new object !
+        output_dict = dict(self)
         bmc_type = self['bmc_type']
 
-        for g in self._groups.keys():
-            d.pop(g, None)
+        # remove the raw group objects
+        for group in self._groups.keys():
+            output_dict.pop(group, None)
 
         if bmc_type is not None:
             if flatten:
-                d = dict(d, **self[bmc_type])
+                output_dict = dict(output_dict, **self[bmc_type])
             else:
-                d[bmc_type] = dict(self[bmc_type])
+                output_dict[bmc_type] = dict(self[bmc_type])
 
-        for o in INTERNAL_OPTS:
-            d.pop(o, None)
+        for opt in INTERNAL_OPTS:
+            output_dict.pop(opt, None)
 
-        return d
+        return output_dict

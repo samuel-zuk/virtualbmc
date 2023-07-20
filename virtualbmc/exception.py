@@ -21,6 +21,9 @@ class VirtualBMCError(Exception):
 
         super().__init__(self.message)
 
+    def __repr__(self):
+        return str(self.message)
+
 
 class IronicError:
     pass

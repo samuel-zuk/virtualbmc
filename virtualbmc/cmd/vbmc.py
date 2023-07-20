@@ -12,7 +12,6 @@
 
 from functools import partial
 import json
-import logging
 import sys
 
 from cliff.app import App
@@ -54,13 +53,13 @@ class ZmqClient(object):
                 for attr in dir(obj) if not attr.startswith('_')}
 
     def communicate(self, command, args, no_daemon=False):
-
         data_out = self.to_dict(args)
 
         data_out.update(command=command)
 
         data_out = json.dumps(data_out)
 
+        server_ip = CONF['host_ip']
         server_port = CONF['server_port']
 
         context = socket = None
@@ -69,7 +68,7 @@ class ZmqClient(object):
             context = zmq.Context()
             socket = context.socket(zmq.REQ)
             socket.setsockopt(zmq.LINGER, 5)
-            socket.connect("tcp://127.0.0.1:%s" % server_port)
+            socket.connect(f'tcp://{server_ip}:{server_port}')
 
             poller = zmq.Poller()
             poller.register(socket, zmq.POLLIN)
@@ -117,20 +116,40 @@ class ZmqClient(object):
         return data_in
 
 
+class ListerWithError(Lister):
+    def run(self, parsed_args):
+        # tweaks to the run routine from the Display base class.
+        # https://opendev.org/openstack/cliff/src/branch/master/cliff/display.py
+        parsed_args = self._run_before_hooks(parsed_args)
+        self.formatter = self._formatter_plugins[parsed_args.formatter].obj
+
+        return_value = self.take_action(parsed_args)
+        (rv0, rv1) = return_value
+
+        if isinstance(rv0, int):
+            if rv0 != 0 and isinstance(rv1, str):
+                print(rv1)
+            return rv0
+
+        column_names, data = self._run_after_hooks(parsed_args, (rv0, rv1))
+        self.produce_output(parsed_args, column_names, data)
+        return 0
+
+
 class AddCommand(Command):
     """Create a new BMC for a virtual machine instance"""
 
     def get_parser(self, prog_name):
         self.config = bmc_conf.BMCConfig()
 
+        for typ in bmc_conf.BMC_TYPES:
+            self.config._register_bmc_type(typ)
+
         self.config.init_parser(
             prog='vbmc add',
             version=virtualbmc.__version__,
             description='Create a new BMC for a virtual machine instance'
         )
-
-        for typ in bmc_conf.BMC_TYPES:
-            self.config._register_bmc_type(typ)
 
         def parse_args(args=(), config=None):
             config(
@@ -207,17 +226,19 @@ class StopCommand(Command):
         )
 
 
-class ListCommand(Lister):
+class ListCommand(ListerWithError):
     """List all virtual BMC instances"""
 
     def take_action(self, args):
         rsp = self.app.zmq.communicate(
             'list', args, no_daemon=self.app.options.no_daemon
         )
+        if 'msg' in rsp.keys():
+            return rsp['rc'], rsp['msg']
         return rsp['header'], sorted(rsp['rows'])
 
 
-class ShowCommand(Lister):
+class ShowCommand(ListerWithError):
     """Show virtual BMC properties"""
     def get_parser(self, prog_name):
         parser = super(ShowCommand, self).get_parser(prog_name)
@@ -231,6 +252,8 @@ class ShowCommand(Lister):
         rsp = self.app.zmq.communicate(
             'show', args, no_daemon=self.app.options.no_daemon
         )
+        if 'msg' in rsp.keys():
+            return rsp['rc'], rsp['msg']
         return rsp['header'], sorted(rsp['rows'])
 
 

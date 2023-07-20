@@ -24,7 +24,6 @@ default_opts = [
     ),
     cfg.StrOpt(
         'bmc-type',
-        positional=True,
         default=None,
         choices=('libvirt', 'ironic'),
         help='The service the vBMC will communicate with',

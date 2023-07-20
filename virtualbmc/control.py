@@ -156,10 +156,13 @@ def command_dispatcher(vbmc_manager, data_in):
         }
 
     elif command == 'list':
-        rc, tables = vbmc_manager.list()
+        rc, rv = vbmc_manager.list()
+        if rc != 0:
+            return {'rc': rc, 'msg': [rv]}
 
         header = ('Name', 'Type', 'Status', 'Address', 'Port')
         keys = ('name', 'bmc_type', 'status', 'host_ip', 'port')
+        tables = rv
         return {
             'rc': rc,
             'header': header,
@@ -169,12 +172,14 @@ def command_dispatcher(vbmc_manager, data_in):
         }
 
     elif command == 'show':
-        rc, table = vbmc_manager.show(data_in['domain_name'])
+        rc, rv = vbmc_manager.show(data_in['domain_name'])
+        if rc != 0:
+            return {'rc': rc, 'msg': [rv]}
 
         return {
             'rc': rc,
             'header': ('Property', 'Value'),
-            'rows': table,
+            'rows': rv,
         }
 
     else:
