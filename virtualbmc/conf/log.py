@@ -15,7 +15,7 @@ from oslo_config import cfg
 
 log_opts = [
     cfg.StrOpt('logfile', default=None),
-    cfg.StrOpt('level', default='DEBUG',
+    cfg.StrOpt('level', default='INFO',
                choices=('DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL')),
     cfg.BoolOpt('use_stderr', default=True),
 ]

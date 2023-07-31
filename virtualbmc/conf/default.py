@@ -21,7 +21,7 @@ default_opts = [
     cfg.BoolOpt(
         'enable_ironic',
         default=True,
-        help='Set to enable creating vBMCs for ironic nodes'),
+        help='Set to enable creating vBMCs for Ironic nodes'),
     cfg.BoolOpt(
         'show_passwords',
         default=False,

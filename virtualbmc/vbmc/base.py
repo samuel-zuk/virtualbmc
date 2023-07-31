@@ -38,7 +38,7 @@ class VbmcBase(bmc.Bmc):
         def decorator(func):
             @wraps(func)
             def wrapper(self, *args, **kwargs):
-                raise Exception(f'{args}\n{kwargs}')
+                # raise Exception(f'{args}\n{kwargs}')
                 argument_info = mk_argument_info(args, kwargs)
                 LOG.debug(f'Calling {func.__name__} for {self.vbmc_type} '
                           f'{self.name}{argument_info}')
