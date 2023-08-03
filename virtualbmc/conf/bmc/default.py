@@ -25,7 +25,10 @@ default_opts = [
     cfg.StrOpt(
         'bmc-type',
         default=None,
-        choices=('libvirt', 'ironic'),
+        choices=(
+            ('libvirt', 'Controls libvirt domains'),
+            ('ironic', 'Controls OpenStack Ironic nodes'),
+        ),
         help='The service the vBMC will communicate with',
     ),
     cfg.BoolOpt(

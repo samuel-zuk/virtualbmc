@@ -13,11 +13,13 @@
 from oslo_config import cfg
 
 from virtualbmc.conf import default
-from virtualbmc.conf import log
+from virtualbmc.conf import formatter
 from virtualbmc.conf import ipmi
+from virtualbmc.conf import log
 
 CONF = cfg.CONF
 
 default.register_opts(CONF)
-log.register_opts(CONF)
+formatter.register_opts(CONF)
 ipmi.register_opts(CONF)
+log.register_opts(CONF)

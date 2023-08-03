@@ -10,8 +10,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-# import collections.abc as abc
-import functools
 import pathlib
 
 from oslo_config import cfg
@@ -29,32 +27,6 @@ LOG = log.get_logger()
 BMC_TYPES = ('libvirt', 'ironic')
 INTERNAL_OPTS = ('config_dir', 'config_file', 'config_source')
 
-
-# class BMCConfig2(cfg.ConfigOpts, abc.MutableMapping):
-#     def __setitem__(self, name, value):
-#         try:
-#             if name not in self.keys():
-#                 self.register_opt(cfg.StrOpt(name, default=value))
-#             else:
-#                 self.set_override(name, value)
-#         except Exception as ex:
-#             msg = (f'BMCConfig error when setting option {name}={value}\n'
-#                    f'Error: {ex}')
-#             LOG.exception(msg)
-#             raise ValueError(msg)
-#     def __delitem__(self, name):
-#         try:
-#             if name in self._opts.keys():
-#                 del self._opts[name]
-#             elif name in self._groups.keys():
-#                 del self._groups[name]
-#             else:
-#                 raise ValueError('Option not found')
-#         except Exception as ex:
-#             msg = (f'BMCConfig error when deleting option {name}\n'
-#                    f'Error: {ex}')
-#             LOG.exception(msg)
-#             raise ValueError(msg)
 
 class BMCConfig(cfg.ConfigOpts):
     def __init__(self, bmc_type=None):
@@ -141,11 +113,15 @@ class BMCConfig(cfg.ConfigOpts):
             raise exception.NotFound(name=name)
 
         self._namespace = cfg._Namespace(self)
-        cfg.ConfigParser._parse_file(self.conf_path, self._namespace)
+
+        try:
+            cfg.ConfigParser._parse_file(self.conf_path, self._namespace)
+        except cfg.ConfigFileValueError as ex:
+            raise ValueError(str(ex))
 
         self.bmc_type = self['bmc_type']
-
         self._register_bmc_type(self.bmc_type)
+
         self(args=(name,),
              project=self.name,
              prog='vbmc',
@@ -160,84 +136,62 @@ class BMCConfig(cfg.ConfigOpts):
         # generate a config file from a pre-existing ConfigOpts object; it
         # appears to be something the folks on the oslo.config dev team don't
         # intend for you to be able to do for whatever reason (not yet, at
-        # least). hence, the weird callable dict and the use of interfaces that
-        # are only really documented in the source code itself, which can be
-        # found at
+        # least). hence the use of interfaces that are only really documented
+        # in the source code itself, which can be found at
         # https://opendev.org/openstack/oslo.config/src/branch/master/oslo_config/generator.py
         self._prepare_config_files()
 
-        class FormatterConfig(dict):
-            def __getattr__(self, attr):
-                return self[attr]
+        if output_file is None:
+            with open(self.conf_path, 'w') as conf_file:
+                return self.write(conf_file)
 
-            def __setattr__(self, attr, val):
-                self[attr] = val
+        fmt = gen._OptFormatter(APP_CONF['formatter'], output_file)
+        groups = {'DEFAULT': self,
+                  self.bmc_type: self._groups.get(self.bmc_type)}
 
-        conf_path = output_file if output_file is not None else self.conf_path
+        for (group_name, group_obj) in groups.items():
+            fmt.format_group(group_name)
+            for (opt_name, opt) in group_obj._opts.items():
+                if opt_name in INTERNAL_OPTS:
+                    continue
 
-        with open(conf_path, 'w') as conf_file:
-            fmt_conf = FormatterConfig((
-                ('output_file', conf_file),
-                ('wrap_width', 79),
-                ('minimal', True),
-                ('summarize', False),
-                ('format', 'ini'),
-            ))
-            fmt = gen._OptFormatter(fmt_conf, conf_file)
-            groups = {'DEFAULT': self,
-                      self.bmc_type: self._groups.get(self.bmc_type)}
-
-            for (group_name, group_obj) in groups.items():
-                fmt.format_group(group_name)
-                for (opt_name, opt) in group_obj._opts.items():
-                    if opt_name in INTERNAL_OPTS:
-                        continue
-
-                    # the format() method of the formatter will output the
-                    # default value of whatever Opt object is passed to it,
-                    # so we need to set that equal to the actual opt value.
-                    opt = opt['opt']
-                    opt.default = self._get(
-                        opt_name,
-                        group=(None if group_name == 'DEFAULT' else group_obj)
+                # the format() method of the formatter will output the default
+                # value of whatever Opt object is passed to it, so we need to
+                # set that equal to the Opt's actual value.
+                opt = opt['opt']
+                opt.default = self._get(
+                    opt_name,
+                    group=(None if group_name == 'DEFAULT' else group_obj)
+                )
+                try:
+                    fmt.write('\n')
+                    fmt.format(opt, group_name)
+                except Exception as ex:
+                    fmt.write(
+                        '# Warning: Failed to format sample for %s\n'
+                        '# %s\n' % (opt_name, str(ex))
                     )
-                    try:
-                        fmt.write('\n')
-                        fmt.format(opt, group_name)
-                    except Exception as ex:
-                        fmt.write(
-                            '# Warning: Failed to format sample for %s\n'
-                            '# %s\n' % (opt_name, str(ex))
-                        )
-                fmt.write('\n\n')
+            fmt.write('\n\n')
 
-    def init_parser(self, prog, version, usage=None, description=None,
-                    epilog=None):
+    def init_parser(self, prog='vbmc', version=None, usage=None,
+                    description=None, epilog=None):
+        # code lifted from ConfigOpts.__call__:
+        # https://opendev.org/openstack/oslo.config/src/branch/master/oslo_config/cfg.py#L2097
+        project = 'vbmc'
+        use_env = False
+
         prog, default_config_files, default_config_dirs = self._pre_setup(
-            project='vbmc',
-            prog=prog,
-            version=version,
-            usage=usage,
-            description=description,
-            epilog=epilog,
-            default_config_files=(),
-            default_config_dirs=(),
-        )
-        self._setup(
-            project='vbmc',
-            prog=prog,
-            version=version,
-            usage=usage,
-            default_config_files=default_config_files,
-            default_config_dirs=default_config_dirs,
-            use_env=False
-        )
+            project, prog, version, usage, description, epilog, (), ())
+
+        self._setup(project, prog, version, usage, default_config_files,
+                    default_config_dirs, use_env)
+
         for opt, group in self._all_cli_opts():
             opt._add_to_cli(self._oparser, group)
 
     def get_parser(self):
         if self._oparser is None:
-            raise RuntimeError('Tried to get uninitialized parser')
+            self.init_parser()
         return self._oparser
 
     def as_dict(self, flatten=False):
@@ -245,7 +199,7 @@ class BMCConfig(cfg.ConfigOpts):
         output_dict = dict(self)
         bmc_type = self['bmc_type']
 
-        # remove the raw group objects
+        # remove the actual group objects
         for group in self._groups.keys():
             output_dict.pop(group, None)
 

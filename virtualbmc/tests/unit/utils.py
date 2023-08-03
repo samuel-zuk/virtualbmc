@@ -46,7 +46,7 @@ def mock_existence(*args, return_value=True):
     return decorator if len(args) == 0 else decorator(args[0])
 
 
-def mock_open_file(file_name, read_data):
+def mock_open_file(file_name, read_data=None):
     def mock_open(*args, **kwargs):
         if args[0] == file_name:
             return mock.mock_open(read_data=read_data)(*args, **kwargs)

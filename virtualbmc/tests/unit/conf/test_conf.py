@@ -47,3 +47,14 @@ class ApplicationConfigTestCase(base.TestCase):
 
         for opt, value in log_defaults.items():
             self.assertEqual(self.CONF['log'][opt], value)
+
+    def test_formatter_defaults(self):
+        formatter_defaults = {
+            'wrap_width': 79,
+            'minimal': True,
+            'summarize': False,
+            'format': 'ini',
+        }
+
+        for opt, value in formatter_defaults.items():
+            self.assertEqual(self.CONF['formatter'][opt], value)
