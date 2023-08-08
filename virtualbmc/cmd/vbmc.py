@@ -21,8 +21,8 @@ from cliff.lister import Lister
 import zmq
 
 import virtualbmc
-from virtualbmc.conf import CONF
 from virtualbmc.conf import bmc as bmc_conf
+from virtualbmc.conf import CONF
 from virtualbmc.exception import VirtualBMCError
 from virtualbmc import log
 

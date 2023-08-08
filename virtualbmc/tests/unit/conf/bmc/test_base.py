@@ -13,7 +13,7 @@
 from importlib import reload as importlib_reload
 from io import StringIO
 import os.path
-from unittest import mock, skip
+from unittest import mock
 
 from oslo_config import cfg as oslo_cfg
 

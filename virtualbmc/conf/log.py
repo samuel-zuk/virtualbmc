@@ -20,5 +20,6 @@ log_opts = [
     cfg.BoolOpt('use_stderr', default=True),
 ]
 
+
 def register_opts(conf):
     conf.register_opts(log_opts, group='log')

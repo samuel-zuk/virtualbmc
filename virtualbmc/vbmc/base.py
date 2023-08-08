@@ -16,8 +16,8 @@ import pyghmi.ipmi.bmc as bmc
 
 from virtualbmc import exception
 from virtualbmc import log
-from virtualbmc.vbmc import constants
 from virtualbmc.utils import mk_argument_info
+from virtualbmc.vbmc import constants
 
 LOG = log.get_logger()
 
@@ -34,7 +34,7 @@ class VbmcBase(bmc.Bmc):
 
     @staticmethod
     def bmc_cmd(*args, fail_ok=True):
-        """ decorator that handles errors + debugging info for bmc commands """
+        """decorator that handles errors + debugging info for bmc commands"""
         def decorator(func):
             @wraps(func)
             def wrapper(self, *args, **kwargs):

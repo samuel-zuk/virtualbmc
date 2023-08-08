@@ -10,14 +10,12 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import errno
 import functools
 import logging
 import multiprocessing
 import os
-import signal
 import shutil
-import sys
+import signal
 
 from virtualbmc.conf import bmc as cfg
 from virtualbmc.conf import CONF

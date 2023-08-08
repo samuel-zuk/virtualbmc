@@ -22,15 +22,10 @@ import zmq
 
 from virtualbmc.cmd import vbmc
 from virtualbmc.tests.unit import base
-from virtualbmc.tests.unit import utils as test_utils
 
 
 @mock.patch.object(sys, 'exit', lambda _: None)
 class VBMCTestCase(base.TestCase):
-
-    def setUp(self):
-        super(VBMCTestCase, self).setUp()
-        self.domain = test_utils.get_domain()
 
     @mock.patch.object(zmq, 'Context')
     @mock.patch.object(zmq, 'Poller')
@@ -70,20 +65,26 @@ class VBMCTestCase(base.TestCase):
         }
 
         with mock.patch.object(sys, 'stdout', io.StringIO()) as output:
-            rc = vbmc.main(['add', '--username', 'ironic', 'bar'])
+            rc = vbmc.main(['add', '--bmc-type', 'libvirt',
+                            '--libvirt-domain-name', 'foo', 'bar'])
 
             query = json.loads(mock_zmq_socket.send.call_args[0][0].decode())
 
             expected_query = {
                 'command': 'add',
-                'address': '::',
-                'port': 623,
-                'libvirt_uri': 'qemu:///system',
-                'libvirt_sasl_username': None,
-                'libvirt_sasl_password': None,
-                'username': 'ironic',
+                'name': 'bar',
+                'bmc_type': 'libvirt',
+                'enabled': False,
+                'host_ip': '127.0.0.1',
+                'port': 1623,
+                'username': 'admin',
                 'password': 'password',
-                'domain_name': 'bar',
+                'libvirt': {
+                    'sasl_username': None,
+                    'sasl_password': None,
+                    'uri': 'qemu:///system',
+                    'domain_name': 'foo',
+                }
             }
 
             self.assertEqual(expected_query, query)

@@ -15,10 +15,10 @@ import pathlib
 from oslo_config import cfg
 from oslo_config import generator as gen
 
-from virtualbmc.conf import CONF as APP_CONF
 from virtualbmc.conf.bmc import default as conf_default
 from virtualbmc.conf.bmc import ironic as conf_ironic
 from virtualbmc.conf.bmc import libvirt as conf_libvirt
+from virtualbmc.conf import CONF as APP_CONF
 from virtualbmc import exception
 from virtualbmc import log
 
