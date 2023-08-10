@@ -42,6 +42,12 @@ class IronicVbmc(base.VbmcBase):
         self._conn_args = {'cloud': cloud, 'region': region}
 
     @bmc_cmd
+    def get_boot_device(self):
+        with openstack.connect(**self._conn_args) as conn:
+            device = conn.baremetal.get_node_boot_device(self.node_uuid)
+            return GET_BOOT_DEVICES_MAP.get(device.get('boot_device', None), 0)
+
+    @bmc_cmd
     def set_boot_device(self, bootdevice):
         device = SET_BOOT_DEVICES_MAP.get(bootdevice)
         if device is None:

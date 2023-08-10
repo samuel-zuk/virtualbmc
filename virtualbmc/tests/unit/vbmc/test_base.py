@@ -1,6 +1,3 @@
-# Copyright 2016 Red Hat, Inc.
-# All Rights Reserved.
-#
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
 #    not use this file except in compliance with the License. You may obtain
 #    a copy of the License at
@@ -18,8 +15,10 @@ from unittest import mock
 from virtualbmc import exception
 from virtualbmc.tests.unit import base
 from virtualbmc.vbmc import base as vbmc_base
+from virtualbmc.vbmc import constants
 
 
+# the VbmcBase class is meant to be subclassed, so we do that here.
 class TestVbmc(vbmc_base.VbmcBase):
     bmc_cmd = vbmc_base.VbmcBase.bmc_cmd
     vbmc_type = 'test vbmc'
@@ -65,40 +64,42 @@ class VirtualBMCBaseTestCase(base.TestCase):
         )
         self.assertEqual(self.vbmc.name, 'foobar')
 
-    def test_bmc_cmd_ok_no_args(self):
+    def test_bmc_cmd_no_args(self):
         with self.assertDebugLogs() as logs:
-            self.vbmc.do_nothing('ahhh!')
+            self.assertEqual(self.vbmc.do_nothing('ahhh!'), 0)
             output = '\n'.join(logs.output)
             for info in ('do_nothing', 'foobar', 'test vbmc', 'ahhh!'):
                 self.assertIn(info, output)
 
         with self.assertErrorLogs(no_logs=True):
-            self.vbmc.do_nothing()
+            self.assertEqual(self.vbmc.do_nothing('ahhh!'), 0)
 
-    def test_bmc_cmd_fail_no_args(self):
+    def test_bmc_cmd_error_no_args(self):
         with self.assertDebugLogs() as logs:
-            self.vbmc.do_bad_silently('ahhh!')
+            self.assertEqual(self.vbmc.do_bad_silently('ahhh!'),
+                             constants.IPMI_COMMAND_NODE_BUSY)
             output = '\n'.join(logs.output)
             for info in ('do_bad_silently', 'foobar', 'test vbmc', 'ahhh!'):
                 self.assertIn(info, output)
 
         with self.assertErrorLogs() as logs:
-            self.vbmc.do_bad_silently('ahhh!')
+            self.assertEqual(self.vbmc.do_bad_silently('ahhh!'),
+                             constants.IPMI_COMMAND_NODE_BUSY)
             output = '\n'.join(logs.output)
             for info in ('RuntimeError', 'do_bad_silently', 'foobar', 'ahhh!'):
                 self.assertIn(info, output)
 
-    def test_bmc_cmd_ok_with_args(self):
+    def test_bmc_cmd_with_args(self):
         with self.assertDebugLogs() as logs:
-            self.vbmc.do_nothing_loudly('ahhh!')
+            self.assertEqual(self.vbmc.do_nothing_loudly('ahhh!'), 0)
             output = '\n'.join(logs.output)
             for info in ('do_nothing_loudly', 'foobar', 'test vbmc', 'ahhh!'):
                 self.assertIn(info, output)
 
         with self.assertErrorLogs(no_logs=True):
-            self.vbmc.do_nothing_loudly()
+            self.assertEqual(self.vbmc.do_nothing_loudly('ahhh!'), 0)
 
-    def test_bmc_cmd_fail_with_args(self):
+    def test_bmc_cmd_error_with_args(self):
         with self.assertDebugLogs() as logs:
             self.assertRaises(exception.VirtualBMCError,
                               self.vbmc.do_bad_loudly, 'ahhh!')
