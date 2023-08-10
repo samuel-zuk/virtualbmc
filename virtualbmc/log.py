@@ -25,8 +25,8 @@ LOGGER = None
 
 class VirtualBMCLogger(logging.Logger):
 
-    def __init__(self, level='INFO', logfile=None, use_stderr=False):
-        logging.Logger.__init__(self, 'VirtualBMC')
+    def __init__(self, level=logging.INFO, logfile=None, use_stderr=False):
+        super().__init__('VirtualBMC')
         try:
             self.formatter = logging.Formatter(DEFAULT_LOG_FORMAT)
             self.handlers = []
