@@ -1,3 +1,0 @@
-alias test="stestr run --test-path ./virtualbmc/tests/unit/conf/"
-alias test-q="stestr run --test-path ./virtualbmc/tests/unit/conf/ >/dev/null"
-alias test-qq="stestr run --test-path ./virtualbmc/tests/unit/conf/ >/dev/null 2>/dev/null"

@@ -58,7 +58,7 @@ class VirtualBMCManager(object):
         def wrapper(self, *args, **kwargs):
             try:
                 rv = func(self, *args, **kwargs)
-                return 0, rv if isinstance(rv, str) else ''
+                return 0, (rv if isinstance(rv, str) else '')
             except Exception as ex:
                 argument_info = utils.mk_argument_info(args, kwargs)
                 LOG.exception(f'Error calling "{func.__name__}"'
@@ -73,14 +73,14 @@ class VirtualBMCManager(object):
             signal.signal(signal.SIGTERM, signal.SIG_DFL)
 
             try:
-                if bmc_config['bmc_type'] == 'libvirt':
+                bmc_type = bmc_config['bmc_type']
+                if bmc_type == 'libvirt':
                     bmc = LibvirtVbmc(**bmc_config.as_dict(flatten=True))
-                elif bmc_config['bmc_type'] == 'ironic':
+                elif bmc_type == 'ironic':
                     bmc = IronicVbmc(**bmc_config.as_dict(flatten=True))
                 else:
-                    raise ValueError(
-                        f'Unknown bmc type {bmc_config["bmc_type"]}'
-                    )
+                    raise ValueError(f'Unknown bmc type {bmc_type}')
+
                 bmc.listen(timeout=CONF['ipmi']['session_timeout'])
             except Exception as e:
                 LOG.exception(
@@ -144,12 +144,12 @@ class VirtualBMCManager(object):
         bmc_type = kwargs.pop('bmc_type')
 
         if bmc_type == 'libvirt':
-            self.add_libvirt(**kwargs.pop(bmc_type), **kwargs)
+            self._add_libvirt(**kwargs.pop(bmc_type), **kwargs)
         elif bmc_type == 'ironic':
-            self.add_ironic(**kwargs.pop(bmc_type), **kwargs)
+            self._add_ironic(**kwargs.pop(bmc_type), **kwargs)
 
-    def add_libvirt(self, name, username, password, host_ip, port,
-                    uri, domain_name, sasl_username, sasl_password, **kwargs):
+    def _add_libvirt(self, name, username, password, host_ip, port,
+                     uri, domain_name, sasl_username, sasl_password, **kwargs):
         if domain_name is None:
             LOG.debug(f'Libvirt domain name not specified, setting value '
                       f'equal to vBMC name "{name}"')
@@ -180,8 +180,8 @@ class VirtualBMCManager(object):
             self.delete(name)
             raise RuntimeError(f'Error creating libvirt vBMC {name}')
 
-    def add_ironic(self, name, username, password, host_ip, port,
-                   node_uuid, cloud, region, **kwargs):
+    def _add_ironic(self, name, username, password, host_ip, port,
+                    node_uuid, cloud, region, **kwargs):
         if node_uuid is None:
             node_uuid = name
 

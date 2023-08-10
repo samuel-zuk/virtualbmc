@@ -42,7 +42,7 @@ class BMCConfigTestCase(base.TestCase):
         app_conf_patcher = mock.patch('virtualbmc.conf.CONF', mock_conf)
         app_conf_patcher.start()
         self.addCleanup(app_conf_patcher.stop)
-        importlib_reload(bmc_conf)
+        importlib_reload(bmc_conf.base)
 
         self.CONF = bmc_conf.BMCConfig()
         self.default_values = {

@@ -27,9 +27,6 @@ def mock_existence(*args, return_value=True):
         'os.path.exists',
         'os.path.isdir',
         'os.path.isfile',
-        'pathlib.Path.exists',
-        'pathlib.Path.is_dir',
-        'pathlib.Path.is_file'
     ]
 
     def decorator(func):

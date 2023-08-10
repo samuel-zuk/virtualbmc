@@ -101,7 +101,7 @@ def mk_argument_info(args, kwargs):
     if args or kwargs:
         if args:
             args_str = ', '.join(args)
-            argument_info += f' with args "{args_str}"'
+            argument_info += f' with args {args_str}'
         if kwargs:
             kwargs_str = ', '.join(
                 map(lambda pair: '{0}={1}'.format(*pair),

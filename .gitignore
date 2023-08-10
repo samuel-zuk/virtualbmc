@@ -57,7 +57,3 @@ ChangeLog
 *~
 .*.swp
 .*sw?
-
-# temporary, remove later
-.vbmc
-master.pid
