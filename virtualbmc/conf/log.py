@@ -10,17 +10,16 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from unittest import mock
-
-from virtualbmc import exception
-from virtualbmc import manager
-from virtualbmc.tests.unit import base
+from oslo_config import cfg
 
 
-class VirtualBMCManagerTestCase(base.TestCase):
-    _MOCK_CONFIG_PATH = '/path/to/config'
+log_opts = [
+    cfg.StrOpt('logfile', default=None),
+    cfg.StrOpt('level', default='INFO',
+               choices=('DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL')),
+    cfg.BoolOpt('use_stderr', default=True),
+]
 
-    def setUp(self):
-        super.setUp()
 
-    # TODO: write more tests
+def register_opts(conf):
+    conf.register_opts(log_opts, group='log')

@@ -12,8 +12,9 @@
 
 import errno
 import logging
+import sys
 
-from virtualbmc import config
+from virtualbmc.conf import CONF
 
 __all__ = ['get_logger']
 
@@ -24,23 +25,23 @@ LOGGER = None
 
 class VirtualBMCLogger(logging.Logger):
 
-    def __init__(self, debug=False, logfile=None):
-        logging.Logger.__init__(self, 'VirtualBMC')
+    def __init__(self, level=logging.INFO, logfile=None, use_stderr=False):
+        super().__init__('VirtualBMC')
         try:
+            self.formatter = logging.Formatter(DEFAULT_LOG_FORMAT)
+            self.handlers = []
             if logfile is not None:
-                self.handler = logging.FileHandler(logfile)
-            else:
-                self.handler = logging.StreamHandler()
+                self.handlers.append(logging.FileHandler(logfile))
+            if use_stderr:
+                self.handlers.append(logging.StreamHandler(sys.stderr))
+            if len(self.handlers) == 0:
+                self.handlers.append(logging.NullHandler())
 
-            formatter = logging.Formatter(DEFAULT_LOG_FORMAT)
-            self.handler.setFormatter(formatter)
-            self.addHandler(self.handler)
+            for handler in self.handlers:
+                handler.setFormatter(self.formatter)
+                self.addHandler(handler)
 
-            if debug:
-                self.setLevel(logging.DEBUG)
-            else:
-                self.setLevel(logging.INFO)
-
+            self.setLevel(getattr(logging, level))
         except IOError as e:
             if e.errno == errno.EACCES:
                 pass
@@ -49,8 +50,9 @@ class VirtualBMCLogger(logging.Logger):
 def get_logger():
     global LOGGER
     if LOGGER is None:
-        log_conf = config.get_config()['log']
-        LOGGER = VirtualBMCLogger(debug=log_conf['debug'],
-                                  logfile=log_conf['logfile'])
+        log_conf = CONF['log']
+        LOGGER = VirtualBMCLogger(level=log_conf['level'],
+                                  logfile=log_conf['logfile'],
+                                  use_stderr=log_conf['use_stderr'])
 
     return LOGGER

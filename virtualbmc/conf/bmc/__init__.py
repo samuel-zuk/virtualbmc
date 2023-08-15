@@ -10,17 +10,4 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from unittest import mock
-
-from virtualbmc import exception
-from virtualbmc import manager
-from virtualbmc.tests.unit import base
-
-
-class VirtualBMCManagerTestCase(base.TestCase):
-    _MOCK_CONFIG_PATH = '/path/to/config'
-
-    def setUp(self):
-        super.setUp()
-
-    # TODO: write more tests
+from virtualbmc.conf.bmc.base import *

@@ -5,8 +5,9 @@ VirtualBMC
 Overview
 --------
 
-This repository is a development fork of https://opendev.org/openstack/virtualbmc,
-intended to create a virtual BMC for Ironic nodes (instead of virtual machines).
+This repository is a development fork of
+https://opendev.org/openstack/virtualbmc, intended to create a virtual BMC for
+Ironic nodes (instead of virtual machines).
 
 
 Installation
@@ -22,16 +23,16 @@ Installation
 Usage
 ~~~~~
 
-Start the virtual BMC daemon. Note that this user must be able to run OpenStack commands
-(for example, by sourcing an OpenStack RC file), and it must have permission to bind
-ports.
+Start the virtual BMC daemon. Note that this user must be able to run OpenStack
+commands (for example, by sourcing an OpenStack RC file), and it must have
+permission to bind ports.
 
 .. code-block:: bash
 
   vbmcd
 
-Once the daemon is running, you can create and start virtual BMC instances for a node
-as follows:
+Once the daemon is running, you can create and start virtual BMC instances for
+a node as follows:
 
 .. code-block:: bash
 

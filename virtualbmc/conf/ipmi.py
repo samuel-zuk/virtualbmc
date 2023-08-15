@@ -10,17 +10,17 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from unittest import mock
-
-from virtualbmc import exception
-from virtualbmc import manager
-from virtualbmc.tests.unit import base
+from oslo_config import cfg
 
 
-class VirtualBMCManagerTestCase(base.TestCase):
-    _MOCK_CONFIG_PATH = '/path/to/config'
+ipmi_opts = [
+    cfg.IntOpt(
+        'session_timeout',
+        default=1,
+        help='Maximum time to wait for the data to come across (in seconds)',
+    ),
+]
 
-    def setUp(self):
-        super.setUp()
 
-    # TODO: write more tests
+def register_opts(conf):
+    conf.register_opts(ipmi_opts, group='ipmi')

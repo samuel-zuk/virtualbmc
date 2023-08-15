@@ -19,12 +19,10 @@ import sys
 
 import zmq
 
-from virtualbmc import config as vbmc_config
+from virtualbmc.conf import CONF
 from virtualbmc import exception
 from virtualbmc import log
 from virtualbmc.manager import VirtualBMCManager
-
-CONF = vbmc_config.get_config()
 
 LOG = log.get_logger()
 
@@ -46,7 +44,7 @@ def main_loop(vbmc_manager, handle_command):
     outcome of the command, and optionally 2-D table conveyed through the
     `header` and `rows` attributes pointing to lists of cell values.
     """
-    server_port = CONF['default']['server_port']
+    server_port = CONF['server_port']
 
     context = socket = None
 
@@ -87,7 +85,7 @@ def main_loop(vbmc_manager, handle_command):
 
             except exception.VirtualBMCError as ex:
                 msg = 'Command failed: %(error)s' % {'error': ex}
-                LOG.error(msg)
+                LOG.exception(msg)
                 data_out = {
                     'rc': 1,
                     'msg': [msg]
@@ -126,16 +124,6 @@ def command_dispatcher(vbmc_manager, data_in):
     LOG.debug('Running "%(cmd)s" command handler', {'cmd': command})
 
     if command == 'add':
-
-        # Check if the username and password were given for SASL
-        sasl_user = data_in['libvirt_sasl_username']
-        sasl_pass = data_in['libvirt_sasl_password']
-        if any((sasl_user, sasl_pass)):
-            if not all((sasl_user, sasl_pass)):
-                error = ("A password and username are required to use "
-                         "Libvirt's SASL authentication")
-                return {'msg': [error], 'rc': 1}
-
         rc, msg = vbmc_manager.add(**data_in)
 
         return {
@@ -168,10 +156,13 @@ def command_dispatcher(vbmc_manager, data_in):
         }
 
     elif command == 'list':
-        rc, tables = vbmc_manager.list()
+        rc, rv = vbmc_manager.list()
+        if rc != 0:
+            return {'rc': rc, 'msg': [rv]}
 
-        header = ('Domain name', 'Status', 'Address', 'Port')
-        keys = ('domain_name', 'status', 'address', 'port')
+        header = ('Name', 'Type', 'Status', 'Address', 'Port')
+        keys = ('name', 'bmc_type', 'status', 'host_ip', 'port')
+        tables = rv
         return {
             'rc': rc,
             'header': header,
@@ -181,12 +172,14 @@ def command_dispatcher(vbmc_manager, data_in):
         }
 
     elif command == 'show':
-        rc, table = vbmc_manager.show(data_in['domain_name'])
+        rc, rv = vbmc_manager.show(data_in['domain_name'])
+        if rc != 0:
+            return {'rc': rc, 'msg': [rv]}
 
         return {
             'rc': rc,
             'header': ('Property', 'Value'),
-            'rows': table,
+            'rows': rv,
         }
 
     else:
@@ -218,7 +211,7 @@ def application():
         LOG.info('Got keyboard interrupt, exiting')
         vbmc_manager.periodic(shutdown=True)
     except Exception as ex:
-        LOG.error(
+        LOG.exception(
             'Control server error: %(error)s', {'error': ex}
         )
         vbmc_manager.periodic(shutdown=True)

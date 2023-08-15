@@ -51,6 +51,21 @@ class MiscUtilsTestCase(base.TestCase):
         expected = {'foo': 'bar', 'password': '***'}
         self.assertEqual(expected, output_dict)
 
+    def test_mk_argument_info(self):
+        test_cases = (
+            ([], {}, ''),
+            (['argument'], {}, ' with args argument'),
+            (['arg1', 'arg2'], {}, ' with args arg1, arg2'),
+            ([], {'color': 'red'}, ' with kwargs color=red'),
+            ([], {'color': 'red', 'name': 'Bob'},
+             ' with kwargs color=red, name=Bob'),
+            (['arg'], {'color': 'red'}, ' with args arg and kwargs color=red'),
+            (['arg1', 'arg2'], {'color': 'red', 'name': 'Bob'},
+             ' with args arg1, arg2 and kwargs color=red, name=Bob')
+        )
+        for args, kwargs, expected in test_cases:
+            self.assertEqual(utils.mk_argument_info(args, kwargs), expected)
+
 
 class LibvirtUtilsTestCase(base.TestCase):
 

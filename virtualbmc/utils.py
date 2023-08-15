@@ -61,7 +61,7 @@ def get_libvirt_domain(conn, domain):
     try:
         return conn.lookupByName(domain)
     except libvirt.libvirtError:
-        raise exception.DomainNotFound(domain=domain)
+        raise exception.DomainNotFound(name=domain)
 
 
 def check_libvirt_connection_and_domain(uri, domain, sasl_username=None,
@@ -94,6 +94,23 @@ def mask_dict_password(dictionary, secret='***'):
         if 'password' in k:
             d[k] = secret
     return d
+
+
+def mk_argument_info(args, kwargs):
+    argument_info = ''
+    if args or kwargs:
+        if args:
+            args_str = ', '.join(args)
+            argument_info += f' with args {args_str}'
+        if kwargs:
+            kwargs_str = ', '.join(
+                map(lambda pair: '{0}={1}'.format(*pair),
+                    kwargs.items())
+            )
+            argument_info += ' and ' if args else ' with '
+            argument_info += f'kwargs {kwargs_str}'
+
+    return argument_info
 
 
 class detach_process(object):

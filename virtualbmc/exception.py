@@ -10,7 +10,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-
 class VirtualBMCError(Exception):
     message = None
 
@@ -20,18 +19,33 @@ class VirtualBMCError(Exception):
         else:
             self.message = message
 
-        super(VirtualBMCError, self).__init__(self.message)
+        super().__init__(self.message)
+
+    def __repr__(self):
+        return str(self.message)
 
 
-class DomainAlreadyExists(VirtualBMCError):
-    message = 'Domain %(domain)s already exists'
+class IronicError:
+    pass
 
 
-class DomainNotFound(VirtualBMCError):
-    message = 'No domain with matching name %(domain)s was found'
+class LibvirtError:
+    pass
 
 
-class LibvirtConnectionOpenError(VirtualBMCError):
+class NotFound(VirtualBMCError):
+    message = 'Virtual machine with name %(name)s not found'
+
+
+class DomainAlreadyExists(VirtualBMCError, LibvirtError):
+    message = 'Domain %(name)s already exists'
+
+
+class DomainNotFound(VirtualBMCError, LibvirtError):
+    message = 'No libvirt domain with matching name %(name)s was found'
+
+
+class LibvirtConnectionOpenError(VirtualBMCError, LibvirtError):
     message = ('Fail to establish a connection with libvirt URI "%(uri)s". '
                'Error: %(error)s')
 
@@ -39,3 +53,7 @@ class LibvirtConnectionOpenError(VirtualBMCError):
 class DetachProcessError(VirtualBMCError):
     message = ('Error when forking (detaching) the VirtualBMC process '
                'from its parent and session. Error: %(error)s')
+
+
+class NodeNotFound(VirtualBMCError, IronicError):
+    message = 'No Ironic node with matching name %(name)s was found'

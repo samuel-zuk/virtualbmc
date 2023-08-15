@@ -13,10 +13,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import builtins
-import os
 from unittest import mock
-
 
 from virtualbmc.cmd import vbmcd
 from virtualbmc import control
@@ -26,9 +23,10 @@ from virtualbmc import utils
 
 class VBMCDTestCase(base.TestCase):
 
-    @mock.patch.object(builtins, 'open')
-    @mock.patch.object(os, 'kill')
-    @mock.patch.object(os, 'unlink')
+    @mock.patch('builtins.open')
+    @mock.patch('os.kill')
+    @mock.patch('os.unlink')
+    @mock.patch('sys.argv', ['vbmcd.py', '--foreground'])
     def test_main_foreground(self, mock_unlink, mock_kill, mock_open):
         with mock.patch.object(control, 'application') as mock_ml:
             mock_kill.side_effect = OSError()
@@ -37,9 +35,10 @@ class VBMCDTestCase(base.TestCase):
             mock_ml.assert_called_once()
             mock_unlink.assert_called_once()
 
-    @mock.patch.object(builtins, 'open')
-    @mock.patch.object(os, 'kill')
-    @mock.patch.object(os, 'unlink')
+    @mock.patch('builtins.open')
+    @mock.patch('os.kill')
+    @mock.patch('os.unlink')
+    @mock.patch('sys.argv', ['vbmcd.py'])
     def test_main_background(self, mock_unlink, mock_kill, mock_open):
         with mock.patch.object(utils, 'detach_process') as mock_dp:
             with mock.patch.object(control, 'application') as mock_ml:

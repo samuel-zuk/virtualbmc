@@ -10,13 +10,14 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import argparse
 import os
 import sys
 import tempfile
 
+from oslo_config import cfg
+
 import virtualbmc
-from virtualbmc import config as vbmc_config
+from virtualbmc.conf import CONF
 from virtualbmc import control
 from virtualbmc import log
 from virtualbmc import utils
@@ -24,24 +25,19 @@ from virtualbmc import utils
 
 LOG = log.get_logger()
 
-CONF = vbmc_config.get_config()
-
 
 def main(argv=sys.argv[1:]):
-    parser = argparse.ArgumentParser(
+    CONF.register_cli_opt(
+        cfg.BoolOpt('foreground', default=False, help='Do not daemonize')
+    )
+    CONF(
         prog='VirtualBMC server',
         description='A virtual BMC server for controlling virtual instances',
+        version=virtualbmc.__version__,
+        default_config_dirs=('.vbmc',),
     )
-    parser.add_argument('--version', action='version',
-                        version=virtualbmc.__version__)
-    parser.add_argument('--foreground',
-                        action='store_true',
-                        default=False,
-                        help='Do not daemonize')
 
-    args = parser.parse_args(argv)
-
-    pid_file = CONF['default']['pid_file']
+    pid_file = os.path.abspath(CONF['pid_file'])
 
     try:
         with open(pid_file) as f:
@@ -53,7 +49,7 @@ def main(argv=sys.argv[1:]):
         pass
 
     else:
-        LOG.error('server PID #%(pid)d still running', {'pid': pid})
+        LOG.exception('server PID #%(pid)d still running', {'pid': pid})
         return 1
 
     def wrap_with_pidfile(func, pid):
@@ -71,7 +67,7 @@ def main(argv=sys.argv[1:]):
             func()
 
         except Exception as e:
-            LOG.error('%(error)s', {'error': e})
+            LOG.exception('%(error)s', {'error': e})
             return 1
 
         finally:
@@ -81,7 +77,7 @@ def main(argv=sys.argv[1:]):
             except Exception:
                 pass
 
-    if args.foreground:
+    if CONF['foreground']:
         return wrap_with_pidfile(control.application, os.getpid())
 
     else:

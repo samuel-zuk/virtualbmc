@@ -10,17 +10,16 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from unittest import mock
+from oslo_config import cfg
 
-from virtualbmc import exception
-from virtualbmc import manager
-from virtualbmc.tests.unit import base
+from virtualbmc.conf import default
+from virtualbmc.conf import formatter
+from virtualbmc.conf import ipmi
+from virtualbmc.conf import log
 
+CONF = cfg.CONF
 
-class VirtualBMCManagerTestCase(base.TestCase):
-    _MOCK_CONFIG_PATH = '/path/to/config'
-
-    def setUp(self):
-        super.setUp()
-
-    # TODO: write more tests
+default.register_opts(CONF)
+formatter.register_opts(CONF)
+ipmi.register_opts(CONF)
+log.register_opts(CONF)

@@ -10,17 +10,15 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from unittest import mock
+# Power states
+POWEROFF = 0
+POWERON = 1
 
-from virtualbmc import exception
-from virtualbmc import manager
-from virtualbmc.tests.unit import base
-
-
-class VirtualBMCManagerTestCase(base.TestCase):
-    _MOCK_CONFIG_PATH = '/path/to/config'
-
-    def setUp(self):
-        super.setUp()
-
-    # TODO: write more tests
+# From the IPMI - Intelligent Platform Management Interface Specification
+# Second Generation v2.0 Document Revision 1.1 October 1, 2013
+# https://www.intel.com/content/dam/www/public/us/en/documents/product-briefs/ipmi-second-gen-interface-spec-v2-rev1-1.pdf
+#
+# Command failed and can be retried
+IPMI_COMMAND_NODE_BUSY = 0xC0
+# Invalid data field in request
+IPMI_INVALID_DATA = 0xcc
